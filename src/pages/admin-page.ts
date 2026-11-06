@@ -7,6 +7,8 @@ import {
 } from '../orders-store';
 import { PRODUCTS } from '../data';
 import { formatGhs, toGhs } from '../currency';
+import { bindDropdowns, renderDropdown } from '../dropdown.tsx';
+import { getCreatorsKitReceiptUrl } from '../creators-kit';
 
 export function renderAdminPage(): string {
   const orders = getOrders();
@@ -41,8 +43,8 @@ export function renderAdminPage(): string {
           </td>
           <td class="admin-td-customer">
             <div class="admin-customer-name">${order.customer.fullName}</div>
-            <div class="admin-customer-email">${order.customer.email}</div>
-            <div class="admin-customer-loc">${order.customer.city}, ${order.customer.country}</div>
+            <div class="admin-customer-email">${order.customer.phone || order.customer.email || 'No phone provided'}</div>
+            <div class="admin-customer-loc">${order.customer.fulfillment === 'pickup' ? 'Store pickup' : 'Free delivery'}</div>
           </td>
           <td class="admin-td-items">
             <div class="admin-items-list">
@@ -54,12 +56,17 @@ export function renderAdminPage(): string {
             <div class="admin-pay-method">${order.paymentMethod}</div>
           </td>
           <td class="admin-td-status">
-            <select class="admin-status-select admin-status--${order.status.toLowerCase()}" data-status-for="${order.id}">
-              <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>Processing</option>
-              <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
-              <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
-              <option value="Cancelled" ${order.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-            </select>
+            ${renderDropdown(
+              [
+                { value: 'Processing', label: 'Processing', icon: 'processing' },
+                { value: 'Shipped', label: 'Shipped', icon: 'shipment' },
+                { value: 'Delivered', label: 'Delivered', icon: 'delivered' },
+                { value: 'Cancelled', label: 'Cancelled', icon: 'cancelled' },
+              ],
+              order.status,
+              `data-status-for="${order.id}"`,
+              `admin-status-select admin-status--${order.status.toLowerCase()}`
+            )}
           </td>
           <td class="admin-td-actions">
             <div class="admin-actions-group">
@@ -152,16 +159,12 @@ export function renderAdminPage(): string {
 }
 
 export function bindAdminEvents(container: HTMLElement) {
-  // Status changes
-  container.addEventListener('change', (e) => {
-    const target = e.target as HTMLSelectElement;
-    const orderId = target.getAttribute('data-status-for');
+  bindDropdowns(container, (dropdown, value) => {
+    const orderId = dropdown.getAttribute('data-status-for');
     if (!orderId) return;
-
-    const newStatus = target.value as OrderStatus;
+    const newStatus = value as OrderStatus;
     updateOrderStatus(orderId, newStatus);
-
-    target.className = `admin-status-select admin-status--${newStatus.toLowerCase()}`;
+    dropdown.className = `dropdown-react-host admin-status-select admin-status--${newStatus.toLowerCase()}`;
   });
 
   // Seed / Reset demo orders
@@ -286,8 +289,9 @@ export function bindAdminEvents(container: HTMLElement) {
       <div class="admin-modal-content">
         <div class="admin-modal-meta">
           <div><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</div>
-          <div><strong>Customer:</strong> ${order.customer.fullName} (${order.customer.email})</div>
-          <div><strong>Shipping Address:</strong> ${order.customer.street}, ${order.customer.city}, ${order.customer.postalCode}, ${order.customer.country}</div>
+          <div><strong>Customer:</strong> ${order.customer.fullName} (${order.customer.phone || order.customer.email || 'No phone provided'})</div>
+          <div><strong>Fulfilment:</strong> ${order.customer.fulfillment === 'pickup' ? 'Store pickup' : 'Free delivery'}</div>
+          <div><strong>Location:</strong> ${order.customer.location ? `${order.customer.location.latitude}, ${order.customer.location.longitude}` : 'Not provided'}</div>
           <div><strong>Payment Method:</strong> ${order.paymentMethod}</div>
           <div><strong>Fulfillment Status:</strong> <span class="status-pill status-pill--${order.status.toLowerCase()}">${order.status}</span></div>
           <div><strong>Track Package:</strong> <a href="#track?id=${order.id}" style="text-decoration:underline; font-weight:600">Open Shipment Tracker ↗</a></div>
@@ -301,12 +305,11 @@ export function bindAdminEvents(container: HTMLElement) {
         <div class="admin-modal-totals">
           <div>Subtotal: ${formatGhs(toGhs(order.subtotal))}</div>
           <div>Shipping: Free Express</div>
-          <div>Tax: ${formatGhs(toGhs(order.tax))}</div>
           <div class="admin-modal-total-strong">Grand Total: ${formatGhs(toGhs(order.total))}</div>
         </div>
 
         <div class="admin-modal-actions">
-          <button class="brand-btn brand-btn--dark" id="print-order-btn">Print Packing Slip</button>
+          <button class="brand-btn brand-btn--dark" id="print-order-btn">Save Receipt in Creator’s Kit</button>
         </div>
       </div>
     `;
@@ -318,7 +321,7 @@ export function bindAdminEvents(container: HTMLElement) {
     });
 
     modalBody.querySelector('#print-order-btn')?.addEventListener('click', () => {
-      window.print();
+      window.open(getCreatorsKitReceiptUrl(order), '_blank', 'noopener,noreferrer');
     });
   });
 

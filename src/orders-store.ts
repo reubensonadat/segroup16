@@ -15,11 +15,19 @@ export interface OrderItem {
 
 export interface CustomerInfo {
   fullName: string;
-  email: string;
-  street: string;
-  city: string;
-  postalCode: string;
-  country: string;
+  phone?: string;
+  email?: string;
+  street?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    accuracyMeters?: number;
+    mapsUrl?: string;
+  };
+  fulfillment?: 'pickup' | 'delivery';
 }
 
 export type OrderStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';

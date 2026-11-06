@@ -1,5 +1,6 @@
 import { getOrders, Order } from '../orders-store';
 import { formatGhs, toGhs } from '../currency';
+import { getCreatorsKitReceiptUrl } from '../creators-kit';
 
 export function renderTrackPage(orderIdParam?: string): string {
   const orders = getOrders();
@@ -51,6 +52,7 @@ export function renderTrackPage(orderIdParam?: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+  const creatorsKitReceiptUrl = getCreatorsKitReceiptUrl(activeOrder);
 
   // Calculate delivery timeline step
   let stepIndex = 1; // 1: Confirmed, 2: Tailoring, 3: Quality Check, 4: Shipped/In Transit, 5: Delivered
@@ -177,13 +179,12 @@ export function renderTrackPage(orderIdParam?: string): string {
             <div class="track-info-line">
               <strong>${activeOrder.customer.fullName}</strong>
             </div>
-            <div class="track-info-line">${activeOrder.customer.street}</div>
-            <div class="track-info-line">${activeOrder.customer.city}, ${activeOrder.customer.postalCode}</div>
-            <div class="track-info-line">${activeOrder.customer.country}</div>
+            <div class="track-info-line">${activeOrder.customer.fulfillment === 'pickup' ? 'Store pickup' : 'Free delivery'}</div>
+            <div class="track-info-line">${activeOrder.customer.location ? `GPS: ${activeOrder.customer.location.latitude.toFixed(5)}, ${activeOrder.customer.location.longitude.toFixed(5)}` : 'Location not provided'}</div>
             <div class="track-info-divider"></div>
             <div class="track-info-line">
               <span>Notification Email:</span>
-              <strong>${activeOrder.customer.email}</strong>
+              <strong>${activeOrder.customer.phone || activeOrder.customer.email || 'Not provided'}</strong>
             </div>
             <div class="track-info-line">
               <span>Courier Tracking:</span>
@@ -201,16 +202,15 @@ export function renderTrackPage(orderIdParam?: string): string {
               <span>Express Shipping</span>
               <span class="track-free">Free</span>
             </div>
-            <div class="track-calc-row">
-              <span>Sales Tax (8%)</span>
-              <span>${formatGhs(toGhs(activeOrder.tax))}</span>
-            </div>
             <div class="track-info-divider"></div>
             <div class="track-calc-row track-calc-row--total">
               <span>Total Paid</span>
               <strong>${formatGhs(toGhs(activeOrder.total))}</strong>
             </div>
             <div class="track-method-tag">Paid via ${activeOrder.paymentMethod}</div>
+            <a class="brand-btn brand-btn--dark" href="${creatorsKitReceiptUrl}" target="_blank" rel="noopener noreferrer">
+              View Digital Receipt — Made with Creator’s Kit
+            </a>
           </div>
 
           <div class="track-actions-card">

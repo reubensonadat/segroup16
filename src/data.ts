@@ -45,13 +45,46 @@ export interface LookData {
   items: LookItemRef[];
 }
 
+function createFitProducts(): Record<string, ProductItem> {
+  const products: Record<string, ProductItem> = {};
+  const cardNameOverrides: Record<string, string> = {};
+
+  for (let fit = 1; fit <= 6; fit += 1) {
+    for (const [type, suffix, optionLegend, sizes] of [
+      ['shirt', 2, 'Size', ['S', 'M', 'L', 'XL']],
+      ['pants', 3, 'Size', ['S', 'M', 'L', 'XL']],
+      ['shoes', 4, 'Shoe size', ['40', '41', '42', '43', '44', '45', '46']],
+    ] as const) {
+      const id = `fit-${fit}-${type}`;
+      const variantStart = 70000000000000 + fit * 1000 + suffix * 100;
+      products[id] = {
+        id,
+        name: cardNameOverrides[id] || `Fit ${fit} ${type[0].toUpperCase()}${type.slice(1)}`,
+        type: `Fit ${fit} lookbook`,
+        vendor: 'Nike',
+        price: type === 'shoes' ? 39.9 : type === 'pants' ? 24.9 : 19.9,
+        image: `/assets/fit-${fit}-${type}.webp`,
+        width: type === 'shoes' ? 600 : 400,
+        height: type === 'shoes' ? 801 : 536,
+        thumbHeightPhone: type === 'shoes' ? 160 : 214,
+        sizes: [...sizes],
+        optionLegend,
+        variants: sizes.map((size, index) => ({ id: variantStart + index, a: true, o: [size] })),
+        url: `#product?id=${id}`,
+      };
+    }
+  }
+
+  return products;
+}
+
 export const PRODUCTS: Record<string, ProductItem> = {
   'tatum-5-orbit-copy': {
     id: 'tatum-5-orbit-copy',
     name: 'Air Jordan 12 Retro',
     type: 'From the original lookbook',
     vendor: 'Nikey | Password: 1',
-    price: 149.0,
+    price: 39.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-tatum-5-orbit-copy.webp',
     width: 400,
     height: 400,
@@ -74,7 +107,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     name: 'Tshirt',
     type: 'From the original lookbook',
     vendor: 'Nike',
-    price: 199.0,
+    price: 19.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-tshirt.webp',
     width: 400,
     height: 563,
@@ -94,7 +127,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     name: 'Sweatshirt',
     type: 'From the original lookbook',
     vendor: 'Nike',
-    price: 199.0,
+    price: 19.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-sweatshirt.webp',
     width: 400,
     height: 581,
@@ -114,7 +147,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     name: 'Tatum 5 Orbit',
     type: 'From the original lookbook',
     vendor: 'Nikey | Password: 1',
-    price: 149.0,
+    price: 39.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-tatum-5-orbit.webp',
     width: 400,
     height: 400,
@@ -137,7 +170,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     name: 'Hoodie Black',
     type: 'From the original lookbook',
     vendor: 'Nike',
-    price: 199.0,
+    price: 19.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-hoodie-black.webp',
     width: 400,
     height: 536,
@@ -157,7 +190,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     name: 'Sweatshirt Plus',
     type: 'From the original lookbook',
     vendor: 'Nike',
-    price: 199.0,
+    price: 19.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-sweatshirt-plus.webp',
     width: 400,
     height: 610,
@@ -177,7 +210,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     name: 'Hoodie',
     type: 'From the original lookbook',
     vendor: 'Nike',
-    price: 199.0,
+    price: 19.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-hoodie.webp',
     width: 400,
     height: 555,
@@ -197,7 +230,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     name: 'Luka 5',
     type: 'From the original lookbook',
     vendor: 'Nikey | Password: 1',
-    price: 149.0,
+    price: 39.9,
     image: 'https://reel-ref-try-the-look.vercel.app/assets/source-air-jordan-12-retro-copy.webp',
     width: 400,
     height: 400,
@@ -215,6 +248,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
     ],
     url: '#product?id=air-jordan-12-retro-copy',
   },
+  ...createFitProducts(),
 };
 
 export const LOOKS: LookData[] = [
@@ -224,18 +258,18 @@ export const LOOKS: LookData[] = [
     name: 'The City Edit',
     key: 'bndthK',
     description: 'A charcoal knit and easy denim.',
-    model640: 'https://reel-ref-try-the-look.vercel.app/assets/model-1-640.webp',
-    model1080: 'https://reel-ref-try-the-look.vercel.app/assets/original-look-1.webp',
-    probe: 'https://reel-ref-try-the-look.vercel.app/assets/model-1-640.webp',
+    model640: '/assets/fit-1-model.webp',
+    model1080: '/assets/fit-1-model.webp',
+    probe: '/assets/fit-1-model.webp',
     pins: [
-      { index: 1, product: 'Air Jordan 12 Retro', left: '47%', top: '27%' },
-      { index: 2, product: 'Tshirt', left: '48%', top: '58%' },
-      { index: 3, product: 'Sweatshirt', left: '45%', top: '96%' },
+      { index: 1, product: 'Fit 1 Shirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Fit 1 Pants', left: '48%', top: '70%' },
+      { index: 3, product: 'Fit 1 Shoes', left: '48%', top: '91%' },
     ],
     items: [
-      { productId: 'tatum-5-orbit-copy' },
-      { productId: 'tshirt' },
-      { productId: 'sweatshirt' },
+      { productId: 'fit-1-shirt' },
+      { productId: 'fit-1-pants' },
+      { productId: 'fit-1-shoes' },
     ],
   },
   {
@@ -244,18 +278,18 @@ export const LOOKS: LookData[] = [
     name: 'Gallery Opening',
     key: 'XckgG6',
     description: 'A clean white tee and relaxed denim.',
-    model640: 'https://reel-ref-try-the-look.vercel.app/assets/model-5-640.webp',
-    model1080: 'https://reel-ref-try-the-look.vercel.app/assets/original-look-5.webp',
-    probe: 'https://reel-ref-try-the-look.vercel.app/assets/model-5-640.webp',
+    model640: '/assets/fit-2-model.webp',
+    model1080: '/assets/fit-2-model.webp',
+    probe: '/assets/fit-2-model.webp',
     pins: [
-      { index: 1, product: 'Tatum 5 Orbit', left: '50%', top: '28%' },
-      { index: 2, product: 'Hoodie Black', left: '48%', top: '58%' },
-      { index: 3, product: 'Tshirt', left: '45%', top: '88%' },
+      { index: 1, product: 'Fit 2 Shirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Fit 2 Pants', left: '48%', top: '70%' },
+      { index: 3, product: 'Fit 2 Shoes', left: '48%', top: '91%' },
     ],
     items: [
-      { productId: 'tatum-5-orbit' },
-      { productId: 'hoodie-black', tag: 'New' },
-      { productId: 'tshirt' },
+      { productId: 'fit-2-shirt' },
+      { productId: 'fit-2-pants' },
+      { productId: 'fit-2-shoes' },
     ],
   },
   {
@@ -264,18 +298,18 @@ export const LOOKS: LookData[] = [
     name: 'Gallery Opening',
     key: 'rLfAhC',
     description: 'Olive knitwear. A grounded palette.',
-    model640: 'https://reel-ref-try-the-look.vercel.app/assets/model-4-640.webp',
-    model1080: 'https://reel-ref-try-the-look.vercel.app/assets/original-look-4.webp',
-    probe: 'https://reel-ref-try-the-look.vercel.app/assets/model-4-640.webp',
+    model640: '/assets/fit-3-model.webp',
+    model1080: '/assets/fit-3-model.webp',
+    probe: '/assets/fit-3-model.webp',
     pins: [
-      { index: 1, product: 'Sweatshirt Plus', left: '50%', top: '28%' },
-      { index: 2, product: 'Tatum 5 Orbit', left: '48%', top: '58%' },
-      { index: 3, product: 'Tshirt', left: '45%', top: '88%' },
+      { index: 1, product: 'Fit 3 Shirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Fit 3 Pants', left: '48%', top: '70%' },
+      { index: 3, product: 'Fit 3 Shoes', left: '48%', top: '91%' },
     ],
     items: [
-      { productId: 'sweatshirt-plus' },
-      { productId: 'tatum-5-orbit', tag: 'New' },
-      { productId: 'tshirt' },
+      { productId: 'fit-3-shirt' },
+      { productId: 'fit-3-pants' },
+      { productId: 'fit-3-shoes' },
     ],
   },
   {
@@ -284,18 +318,18 @@ export const LOOKS: LookData[] = [
     name: 'Studio Day',
     key: 'FKg67q',
     description: 'Black, white and laid-back denim.',
-    model640: 'https://reel-ref-try-the-look.vercel.app/assets/model-6-640.webp',
-    model1080: 'https://reel-ref-try-the-look.vercel.app/assets/original-look-6.webp',
-    probe: 'https://reel-ref-try-the-look.vercel.app/assets/model-6-640.webp',
+    model640: '/assets/fit-4-model.webp',
+    model1080: '/assets/fit-4-model.webp',
+    probe: '/assets/fit-4-model.webp',
     pins: [
-      { index: 1, product: 'Hoodie Black', left: '50%', top: '28%' },
-      { index: 2, product: 'Air Jordan 12 Retro', left: '48%', top: '58%' },
-      { index: 3, product: 'Tshirt', left: '45%', top: '88%' },
+      { index: 1, product: 'Fit 4 Shirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Fit 4 Pants', left: '48%', top: '70%' },
+      { index: 3, product: 'Fit 4 Shoes', left: '48%', top: '91%' },
     ],
     items: [
-      { productId: 'hoodie-black' },
-      { productId: 'tatum-5-orbit-copy' },
-      { productId: 'tshirt' },
+      { productId: 'fit-4-shirt' },
+      { productId: 'fit-4-pants' },
+      { productId: 'fit-4-shoes' },
     ],
   },
   {
@@ -304,18 +338,18 @@ export const LOOKS: LookData[] = [
     name: 'Studio Day',
     key: '8KREEE',
     description: 'Burgundy layers. A tailored perspective.',
-    model640: 'https://reel-ref-try-the-look.vercel.app/assets/model-3-640.webp',
-    model1080: 'https://reel-ref-try-the-look.vercel.app/assets/original-look-3.webp',
-    probe: 'https://reel-ref-try-the-look.vercel.app/assets/model-3-640.webp',
+    model640: '/assets/fit-5-model.webp',
+    model1080: '/assets/fit-5-model.webp',
+    probe: '/assets/fit-5-model.webp',
     pins: [
-      { index: 1, product: 'Sweatshirt', left: '50%', top: '28%' },
-      { index: 2, product: 'Tatum 5 Orbit', left: '48%', top: '58%' },
-      { index: 3, product: 'Tshirt', left: '45%', top: '88%' },
+      { index: 1, product: 'Fit 5 Shirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Fit 5 Pants', left: '48%', top: '70%' },
+      { index: 3, product: 'Fit 5 Shoes', left: '48%', top: '91%' },
     ],
     items: [
-      { productId: 'sweatshirt' },
-      { productId: 'tatum-5-orbit' },
-      { productId: 'tshirt' },
+      { productId: 'fit-5-shirt' },
+      { productId: 'fit-5-pants' },
+      { productId: 'fit-5-shoes' },
     ],
   },
   {
@@ -324,18 +358,18 @@ export const LOOKS: LookData[] = [
     name: 'Studio Day',
     key: 'N3bfm9',
     description: 'A grey crew and your favourite denim.',
-    model640: 'https://reel-ref-try-the-look.vercel.app/assets/model-2-640.webp',
-    model1080: 'https://reel-ref-try-the-look.vercel.app/assets/original-look-2.webp',
-    probe: 'https://reel-ref-try-the-look.vercel.app/assets/model-2-640.webp',
+    model640: '/assets/fit-6-model.webp',
+    model1080: '/assets/fit-6-model.webp',
+    probe: '/assets/fit-6-model.webp',
     pins: [
-      { index: 1, product: 'Hoodie', left: '50%', top: '28%' },
-      { index: 2, product: 'Luka 5', left: '48%', top: '58%' },
-      { index: 3, product: 'Tshirt', left: '45%', top: '88%' },
+      { index: 1, product: 'Fit 6 Shirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Fit 6 Pants', left: '48%', top: '70%' },
+      { index: 3, product: 'Fit 6 Shoes', left: '48%', top: '91%' },
     ],
     items: [
-      { productId: 'hoodie' },
-      { productId: 'air-jordan-12-retro-copy' },
-      { productId: 'tshirt' },
+      { productId: 'fit-6-shirt' },
+      { productId: 'fit-6-pants' },
+      { productId: 'fit-6-shoes' },
     ],
   },
 ];

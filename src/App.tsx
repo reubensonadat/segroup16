@@ -11,8 +11,8 @@ function Header() {
       </a>
       <nav aria-label="Main navigation">
         <a href="#home" aria-current="page">Home</a>
-        <a href="#orbit">Nike Orbit</a>
-        <a href="#hand-rail">Hand Rail Pro</a>
+        <a href="#orbit">Shoes</a>
+        <a href="#collection">Collection</a>
         <a href="#track">Track Order</a>
         <a href="#admin" className="nav-admin-link">Admin</a>
       </nav>

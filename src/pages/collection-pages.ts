@@ -78,23 +78,11 @@ function showToast(message: string) {
 }
 
 export function renderOrbitPage(): string {
-  const shoes = [
-    {
-      item: PRODUCTS['tatum-5-orbit'],
-      tag: 'Flagship Edition',
-      desc: 'Elephant print accents with crisp premium leather overlays and dual-density heel support.',
-    },
-    {
-      item: PRODUCTS['tatum-5-orbit-copy'],
-      tag: 'Air Jordan 12 Retro',
-      desc: 'Cream and charcoal tones with muted pink accents engineered for tailored streetwear presence.',
-    },
-    {
-      item: PRODUCTS['air-jordan-12-retro-copy'],
-      tag: 'Luka 5 Stealth',
-      desc: 'Triple-black matte execution with high-traction radial outsole grooves and sculpted foam cushion.',
-    },
-  ];
+  const shoes = Array.from({ length: 6 }, (_, index) => ({
+    item: PRODUCTS[`fit-${index + 1}-shoes`],
+    tag: `Fit ${index + 1} footwear`,
+    desc: 'A runway-matched shoe selected to complete this fit.',
+  }));
 
   const shoesHtml = shoes
     .map(({ item, tag, desc }) => {
@@ -225,38 +213,13 @@ export function bindOrbitEvents(container: HTMLElement) {
 }
 
 export function renderHandRailPage(): string {
-  const featuredGarments: Array<{ key: string; badge: string; desc: string }> = [
-    {
-      key: 'sweatshirt',
-      badge: '480 GSM Fleece',
-      desc: 'Dropped shoulder crewneck spun from custom heavyweight cotton fleece with architectural draping.',
-    },
-    {
-      key: 'tshirt',
-      badge: 'Heavyweight Jersey',
-      desc: 'The definitive oversized tee cut from combed organic cotton jersey with reinforced collar binding.',
-    },
-    {
-      key: 'sweatshirt-plus',
-      badge: 'Urban Cut',
-      desc: 'Structured oversized fleece layer designed for relaxed layering over vintage washed denim.',
-    },
-    {
-      key: 'hoodie',
-      badge: 'Signature Hood',
-      desc: 'Double-layered hood with seamless kangaroo pocket and ribbed ergonomic cuffs.',
-    },
-    {
-      key: 'hoodie-black',
-      badge: 'Matte Stealth',
-      desc: 'Minimalist monochrome hoodie with blind hem stitching and dropped armholes.',
-    },
-    {
-      key: 'tatum-5-orbit',
-      badge: 'Orbit Footwear',
-      desc: 'Engineered low-profile court silhouette with radial tread outsole and sculptured foam midsole.',
-    },
-  ];
+  const featuredGarments = Array.from({ length: 6 }, (_, index) =>
+    ['shirt', 'pants'].map((type) => ({
+      key: `fit-${index + 1}-${type}`,
+      badge: `Fit ${index + 1} ${type}`,
+      desc: 'An individual piece from the matching runway fit.',
+    }))
+  ).flat();
 
   const garmentCardsHtml = featuredGarments
     .map(({ key, badge, desc }) => {
@@ -323,10 +286,9 @@ export function renderHandRailPage(): string {
     <div class="brand-page rail-page">
       <div class="brand-hero">
         <div class="brand-hero-badge">Campaign Lookbook & Pieces</div>
-        <h1 class="brand-hero-title">Hand Rail Pro</h1>
+        <h1 class="brand-hero-title">Collection</h1>
         <p class="brand-hero-sub">
-          Street culture meets architectural modernism. Hand Rail Pro documents the natural movement
-          of heavyweight fleece, dropped-shoulder hoodies, and unstructured wide-leg denim. Explore the campaign and shop each individual piece below.
+          Explore every individual shirt and pants piece from the six runway fits.
         </p>
       </div>
 
@@ -364,7 +326,7 @@ export function renderHandRailPage(): string {
 
       <div class="rail-section-header">
         <span class="rail-kicker">Individual Garments</span>
-        <h2 class="rail-section-title">The Hand Rail Pieces</h2>
+        <h2 class="rail-section-title">All Fit Garments</h2>
         <p class="rail-section-sub">Select your size for each standalone item cut for runway proportion and durability.</p>
       </div>
 

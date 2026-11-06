@@ -2,6 +2,8 @@ import { PRODUCTS, ProductItem } from '../data';
 import { validateBagItems, addToBag, StylingBagItem } from '../runway-logic';
 import { createOrder, CustomerInfo, OrderItem } from '../orders-store';
 import { formatGhs, toGhs } from '../currency';
+import { bindDropdowns } from '../dropdown.tsx';
+import { detectCustomerLocation } from '../location';
 
 const STORAGE_KEY = 'runway-styling-bag-v3';
 
@@ -97,8 +99,7 @@ export function renderCartPage(): string {
     })
     .join('');
 
-  const tax = subtotal * 0.08;
-  const total = subtotal + tax;
+  const total = subtotal;
 
   return `
     <div class="brand-page cart-page">
@@ -129,10 +130,6 @@ export function renderCartPage(): string {
           <div class="cart-summary-line">
             <span>Shipping</span>
             <span class="cart-free-tag">Free Express</span>
-          </div>
-          <div class="cart-summary-line">
-            <span>Estimated Tax (8%)</span>
-            <span>${formatGhs(tax)}</span>
           </div>
           <div class="cart-summary-divider"></div>
           <div class="cart-summary-line cart-summary-line--total">
@@ -167,56 +164,59 @@ export function renderCartPage(): string {
           </div>
 
           <form id="checkout-form" class="checkout-form">
-            <div class="checkout-section-title">1. Shipping Information</div>
+            <div class="checkout-section-title">1. Ghana Delivery Details</div>
             <div class="checkout-form-grid">
               <div class="form-field form-field--full">
                 <label for="c-name">Full Name *</label>
-                <input type="text" id="c-name" required placeholder="Alexander McQueen" value="Marcus Vance" class="brand-input" />
+                <input type="text" id="c-name" required placeholder="Your full name" class="brand-input" />
               </div>
               <div class="form-field form-field--full">
-                <label for="c-email">Email Address *</label>
-                <input type="email" id="c-email" required placeholder="alex@studio.com" value="m.vance@studio.design" class="brand-input" />
+                <label for="c-phone">Phone Number *</label>
+                <input type="tel" id="c-phone" required placeholder="024 000 0000" class="brand-input" />
               </div>
               <div class="form-field form-field--full">
-                <label for="c-street">Street Address *</label>
-                <input type="text" id="c-street" required placeholder="48 Mercer St, Apt 4B" value="48 Mercer St" class="brand-input" />
-              </div>
-              <div class="form-field">
-                <label for="c-city">City *</label>
-                <input type="text" id="c-city" required placeholder="New York" value="New York" class="brand-input" />
-              </div>
-              <div class="form-field">
-                <label for="c-zip">ZIP / Postal Code *</label>
-                <input type="text" id="c-zip" required placeholder="10013" value="10013" class="brand-input" />
+                <label>Order fulfilment *</label>
+                <div class="checkout-choice-grid">
+                  <label class="checkout-choice-card">
+                    <input type="radio" name="fulfillment" value="delivery" checked />
+                    <span class="checkout-choice-icon">DELIVERY</span>
+                    <strong>Free delivery</strong>
+                    <small>Bring my order to my location</small>
+                  </label>
+                  <label class="checkout-choice-card">
+                    <input type="radio" name="fulfillment" value="pickup" />
+                    <span class="checkout-choice-icon">PICKUP</span>
+                    <strong>Pick up from the store</strong>
+                    <small>I will collect my order</small>
+                  </label>
+                </div>
               </div>
               <div class="form-field form-field--full">
-                <label for="c-country">Country *</label>
-                <select id="c-country" class="brand-input">
-                  <option value="United States" selected>United States</option>
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Canada">Canada</option>
-                  <option value="France">France</option>
-                  <option value="Germany">Germany</option>
-                  <option value="Japan">Japan</option>
-                </select>
+                <label>Delivery location</label>
+                <button type="button" class="brand-btn" id="use-location-btn">Share my current location</button>
+                <input type="hidden" id="c-location" />
+                <small id="location-status">Required for free delivery. Optional for pickup.</small>
               </div>
             </div>
 
-            <div class="checkout-section-title">2. Payment Simulation</div>
+            <div class="checkout-section-title">2. Payment Method</div>
             <div class="checkout-payment-options">
-              <label class="pay-radio">
-                <input type="radio" name="paymentMethod" value="Apple Pay" checked />
-                <span>Apple Pay (Instant Biometric)</span>
+              <label class="checkout-choice-card">
+                <input type="radio" name="paymentMethod" value="Mobile Money" checked />
+                <span class="checkout-choice-icon">MOMO</span>
+                <strong>Mobile Money</strong>
+                <small>Pay with your Ghana mobile wallet</small>
               </label>
-              <label class="pay-radio">
-                <input type="radio" name="paymentMethod" value="Credit Card (•••• 8421)" />
-                <span>Credit Card (Visa / Mastercard)</span>
+              <label class="checkout-choice-card">
+                <input type="radio" name="paymentMethod" value="Cash on Delivery" />
+                <span class="checkout-choice-icon">CASH</span>
+                <strong>Cash on delivery</strong>
+                <small>Pay when your order arrives</small>
               </label>
             </div>
 
             <div class="checkout-modal-summary">
               <div>Subtotal: ${formatGhs(subtotal)}</div>
-              <div>Tax (8%): ${formatGhs(tax)}</div>
               <strong>Total Due: ${formatGhs(total)}</strong>
             </div>
 
@@ -245,6 +245,8 @@ export function renderCartPage(): string {
 }
 
 export function bindCartEvents(container: HTMLElement) {
+  bindDropdowns(container);
+
   // Quantity and remove buttons
   container.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
@@ -323,25 +325,61 @@ export function bindCartEvents(container: HTMLElement) {
   const checkoutForm = container.querySelector('#checkout-form') as HTMLFormElement | null;
   const successModal = container.querySelector('#order-success-modal') as HTMLDialogElement | null;
   const successOrderIdEl = container.querySelector('#success-order-id') as HTMLElement | null;
+  const locationButton = container.querySelector<HTMLButtonElement>('#use-location-btn');
+  const locationStatus = container.querySelector<HTMLElement>('#location-status');
+  const locationField = container.querySelector<HTMLElement>('#use-location-btn')?.closest<HTMLElement>('.form-field');
+  const fulfillmentInputs = container.querySelectorAll<HTMLInputElement>('input[name="fulfillment"]');
+  const updateLocationRequirement = (value: string) => {
+    const isDelivery = value === 'delivery';
+    if (locationField) locationField.hidden = !isDelivery;
+    if (!isDelivery && locationStatus) locationStatus.textContent = 'No location needed for store pickup.';
+    if (isDelivery && locationStatus && !container.querySelector<HTMLInputElement>('#c-location')?.value) {
+      locationStatus.textContent = 'Required for free delivery. Optional for pickup.';
+    }
+  };
+  fulfillmentInputs.forEach((input) => {
+    input.addEventListener('change', () => updateLocationRequirement(input.value));
+  });
+  const selectedFulfillment = container.querySelector<HTMLInputElement>('input[name="fulfillment"]:checked');
+  updateLocationRequirement(selectedFulfillment?.value || 'delivery');
+  locationButton?.addEventListener('click', async () => {
+    locationButton.disabled = true;
+    if (locationStatus) locationStatus.textContent = 'Requesting your location…';
+    try {
+      const location = await detectCustomerLocation();
+      const locationInput = container.querySelector<HTMLInputElement>('#c-location');
+      if (locationInput) locationInput.value = JSON.stringify(location);
+      if (locationStatus) {
+        locationStatus.textContent = `Location saved: ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)} (accurate to about ${location.accuracyMeters}m).`;
+      }
+    } catch (error) {
+      if (locationStatus) locationStatus.textContent = error instanceof Error ? error.message : 'Could not save your location.';
+    } finally {
+      locationButton.disabled = false;
+    }
+  });
 
   checkoutForm?.addEventListener('submit', (e) => {
     e.preventDefault();
 
     const nameInput = container.querySelector('#c-name') as HTMLInputElement;
-    const emailInput = container.querySelector('#c-email') as HTMLInputElement;
-    const streetInput = container.querySelector('#c-street') as HTMLInputElement;
-    const cityInput = container.querySelector('#c-city') as HTMLInputElement;
-    const zipInput = container.querySelector('#c-zip') as HTMLInputElement;
-    const countrySelect = container.querySelector('#c-country') as HTMLSelectElement;
+    const phoneInput = container.querySelector('#c-phone') as HTMLInputElement;
+    const locationInput = container.querySelector('#c-location') as HTMLInputElement;
     const paymentRadio = container.querySelector('input[name="paymentMethod"]:checked') as HTMLInputElement;
+    const fulfillmentRadio = container.querySelector('input[name="fulfillment"]:checked') as HTMLInputElement;
+    const location = locationInput.value ? JSON.parse(locationInput.value) as CustomerInfo['location'] : undefined;
+    const fulfillment = (fulfillmentRadio?.value as 'pickup' | 'delivery') || 'delivery';
+    if (fulfillment === 'delivery' && !location) {
+      if (locationStatus) locationStatus.textContent = 'Please share your location for free delivery.';
+      return;
+    }
 
     const customer: CustomerInfo = {
       fullName: nameInput.value.trim() || 'Valued Client',
-      email: emailInput.value.trim() || 'client@studio.com',
-      street: streetInput.value.trim() || '48 Mercer St',
-      city: cityInput.value.trim() || 'New York',
-      postalCode: zipInput.value.trim() || '10013',
-      country: countrySelect?.value || 'United States',
+      phone: phoneInput.value.trim(),
+      country: 'Ghana',
+      fulfillment,
+      ...(location ? {location} : {}),
     };
 
     const currentItems = getBagItems();
@@ -367,11 +405,10 @@ export function bindCartEvents(container: HTMLElement) {
       }
     });
 
-    const tax = subtotal * 0.08;
-    const paymentMethod = paymentRadio?.value || 'Credit Card';
+    const paymentMethod = paymentRadio?.value || 'Mobile Money';
 
     // Create and save real order
-    const created = createOrder(customer, orderItems, subtotal, 0, tax, paymentMethod);
+    const created = createOrder(customer, orderItems, subtotal, 0, 0, paymentMethod);
 
     // Empty bag
     saveBagItems([]);

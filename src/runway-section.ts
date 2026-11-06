@@ -305,12 +305,11 @@ export class RunwaySection extends HTMLElement {
 
     if (!this.isMobile) {
       this.stageH = stageRect.height || this.frameH;
-      // Head-to-toe headroom on desktop:
-      // Guarantee at least 68px of clear sky above the tallest head so hair is never clipped
-      const bottomPad = 34;
-      const safeHeadroom = 68;
+      // Use one shared frame for every model while leaving a small stage margin.
+      const bottomPad = 24;
+      const safeHeadroom = 18;
       const maxSafeH = (this.stageH - bottomPad - safeHeadroom) / this.fs;
-      this.modelH = Math.max(180, Math.min(Math.round(maxSafeH), 480));
+      this.modelH = Math.max(180, Math.min(Math.round(maxSafeH), 520));
       this.unit = Math.max(120, 0.3 * this.stageW);
       this.stageEl.style.setProperty('--rw-hx', `${0.5 * this.stageW}px`);
       this.stageEl.style.setProperty('--rw-hy', `${bottomPad}px`);
@@ -318,11 +317,10 @@ export class RunwaySection extends HTMLElement {
     } else {
       // Keep the stage within the available first viewport while preserving full-body framing.
       this.stageH = Math.max(320, stageRect.height || 420);
-      // Guarantee at least 42px of clear headroom on mobile:
-      const bottomPad = 22;
-      const safeHeadroom = 42;
+      const bottomPad = 16;
+      const safeHeadroom = 16;
       const maxSafeH = (this.stageH - bottomPad - safeHeadroom) / this.fs;
-      this.modelH = Math.max(180, Math.min(Math.round(maxSafeH), 420));
+      this.modelH = Math.max(180, Math.min(Math.round(maxSafeH), 460));
       this.unit = Math.max(90, this.stageW * 0.32 * 1.6);
       this.stageEl.style.setProperty('--rw-hx', `${0.32 * this.stageW}px`);
       this.stageEl.style.setProperty('--rw-hy', `${bottomPad}px`);
@@ -1187,6 +1185,21 @@ export class RunwaySection extends HTMLElement {
 
     // Scrim close click
     scrim.addEventListener('click', () => this.closeMobileSheet());
+
+    this.sheetHost.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const confirmBtn = target.closest<HTMLElement>('[data-rw-confirm]');
+      if (confirmBtn) {
+        event.preventDefault();
+        this.handleConfirm(confirmBtn);
+      }
+    });
+    this.sheetHost.addEventListener('change', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (input.type !== 'radio' || !input.name.startsWith('Opt-')) return;
+      this.updatePickerOptionState(picker);
+      this.activePickingCard?.setAttribute('data-touched', '1');
+    });
   }
 
   private closeMobileSheet() {

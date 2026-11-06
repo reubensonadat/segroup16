@@ -75,7 +75,7 @@ export function initRouter() {
     } else if (path === '#orbit') {
       pageContainer.innerHTML = renderOrbitPage();
       bindOrbitEvents(pageContainer);
-    } else if (path === '#hand-rail') {
+    } else if (path === '#collection' || path === '#hand-rail') {
       pageContainer.innerHTML = renderHandRailPage();
       bindHandRailEvents(pageContainer);
     } else if (path === '#guide') {

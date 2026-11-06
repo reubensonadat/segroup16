@@ -41,6 +41,8 @@ function renderModelArt(look: LookData, i: number, isHero = false) {
 
 function renderPanel(look: LookData, i: number) {
   const isFirst = i === 0;
+  const bundleTotal = look.items.reduce((total, itemRef) => total + PRODUCTS[itemRef.productId].price, 0);
+  const bundleDiscounted = bundleTotal * 0.9;
 
   const itemsHtml = look.items
     .map((itemRef, itemIdx) => {
@@ -89,9 +91,6 @@ function renderPanel(look: LookData, i: number) {
                 <span class="rw__picker-title">${prod.name}</span>
                 <span class="rw__picker-price">${formatGhs(toGhs(prod.price))}</span>
               </div>
-              <button class="rw__picker-close" data-rw-pick-close aria-label="Close size picker">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
-              </button>
             </div>
             <fieldset class="rw__opt">
               <legend class="rw__opt-name">${prod.optionLegend}</legend>
@@ -127,13 +126,13 @@ function renderPanel(look: LookData, i: number) {
             <span class="rw__bundle-note">Bundle all 3 and save 10%</span>
           </div>
           <div class="rw__bundle-price">
-            <s>${formatGhs(toGhs(547))}</s>
-            <strong>${formatGhs(toGhs(492.3))}</strong>
+            <s>${formatGhs(toGhs(bundleTotal))}</s>
+            <strong>${formatGhs(toGhs(bundleDiscounted))}</strong>
           </div>
         </div>
         <button class="rw__cta" data-rw-all>
           <span class="rw__cta-add">Add full look to bag</span>
-          <span class="rw__cta-m">Add full look — ${formatGhs(toGhs(492.3))}</span>
+          <span class="rw__cta-m">Add full look — ${formatGhs(toGhs(bundleDiscounted))}</span>
           <span class="rw__cta-done">Full look in your bag</span>
           <svg viewBox="0 0 26 14" width="22" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 7h24M19 1l6 6-6 6"/></svg>
           <svg class="rw__cta-spinner" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a9 9 0 1 1-9 9"/></svg>
@@ -210,10 +209,9 @@ export function buildFullHtml(): string {
       </a>
       <nav aria-label="Main navigation">
         <a href="#home" aria-current="page">Home</a>
-        <a href="#orbit">Nike Orbit</a>
-        <a href="#hand-rail">Hand Rail Pro</a>
+        <a href="#orbit">Shoes</a>
+        <a href="#collection">Collection</a>
         <a href="#track">Track Order</a>
-        <a href="#guide">How It's Made</a>
         <a href="#admin" class="nav-admin-link">Admin</a>
       </nav>
       <a href="#cart" id="open-bag" aria-label="Open shopping cart">
