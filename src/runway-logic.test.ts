@@ -104,10 +104,10 @@ test('generateShortlistText creates formatted export text', () => {
       name: 'Air Jordan 12 Retro',
       size: '42',
       quantity: 1,
-      url: 'https://nike-makknzjs.myshopify.com/products/tatum-5-orbit-copy',
+      url: '#product?id=tatum-5-orbit-copy',
     },
   ]);
   assert.match(text, /RUNWAY — STYLING SHORTLIST/);
   assert.match(text, /Air Jordan 12 Retro · Size 42 · Quantity 1/);
-  assert.match(text, /https:\/\/nike-makknzjs\.myshopify\.com\/products\/tatum-5-orbit-copy/);
+  assert.match(text, /#product\?id=tatum-5-orbit-copy/);
 });

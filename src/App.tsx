@@ -34,7 +34,7 @@ function StylingBag() {
           <h2>Your styling bag</h2>
           <button id="close-bag" aria-label="Close styling bag">×</button>
         </div>
-        <p className="bag-note">A local outfit shortlist. No payment or order is collected here. Open a piece on the original demo to continue.</p>
+        <p className="bag-note">A local outfit shortlist. No payment or order is collected here. Continue exploring each piece right here in the runway.</p>
         <div id="bag-items" />
         <p id="bag-total" />
         <button id="export-bag">Download outfit shortlist</button>

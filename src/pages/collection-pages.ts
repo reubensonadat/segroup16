@@ -3,6 +3,71 @@ import { addToBag } from '../runway-logic';
 import { getBagItems, saveBagItems, updateGlobalCartCount } from './cart-page';
 import { formatGhs, toGhs } from '../currency';
 
+export function renderProductPage(productId?: string): string {
+  const product = productId ? PRODUCTS[productId] : undefined;
+  if (!product) {
+    return `
+      <div class="brand-page">
+        <div class="brand-hero">
+          <div class="brand-hero-badge">Runway Collection</div>
+          <h1 class="brand-hero-title">Piece not found</h1>
+          <p class="brand-hero-sub">That runway piece is no longer available.</p>
+          <a href="#home" class="brand-btn brand-btn--dark">Back to Runway</a>
+        </div>
+      </div>
+    `;
+  }
+
+  const defaultSize = product.sizes[0] || 'M';
+  const defaultVariant = product.variants[0];
+  return `
+    <div class="brand-page">
+      <div class="brand-hero">
+        <div class="brand-hero-badge">${product.vendor}</div>
+        <h1 class="brand-hero-title">${product.name}</h1>
+        <p class="brand-hero-sub">${product.type}. Select a size to add this piece to your styling bag.</p>
+      </div>
+      <div class="rail-feature-card">
+        <div class="rail-img-wrap">
+          <img src="${product.image}" alt="${product.name}" />
+        </div>
+        <div class="rail-content">
+          <span class="rail-kicker">${formatGhs(toGhs(product.price))}</span>
+          <h2>${product.optionLegend}</h2>
+          <div class="rail-size-pills">
+            ${product.sizes.map((size, index) => `<button type="button" class="garment-size-pill ${index === 0 ? 'is-active' : ''}" data-product-size="${size}" data-variant-id="${product.variants[index]?.id || defaultVariant.id}">${size}</button>`).join('')}
+          </div>
+          <button class="brand-btn brand-btn--dark" data-product-add data-variant-id="${defaultVariant.id}" data-selected-size="${defaultSize}">Add Size ${defaultSize} to Bag</button>
+          <p><a href="#home">Back to 3D Runway</a></p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function bindProductEvents(container: HTMLElement) {
+  const sizeButtons = container.querySelectorAll<HTMLButtonElement>('[data-product-size]');
+  const addButton = container.querySelector<HTMLButtonElement>('[data-product-add]');
+  sizeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      sizeButtons.forEach((item) => item.classList.remove('is-active'));
+      button.classList.add('is-active');
+      const size = button.dataset.productSize || '';
+      addButton?.setAttribute('data-variant-id', button.dataset.variantId || '');
+      addButton?.setAttribute('data-selected-size', size);
+      if (addButton) addButton.textContent = `Add Size ${size} to Bag`;
+    });
+  });
+  addButton?.addEventListener('click', () => {
+    const variantId = Number(addButton.dataset.variantId);
+    const size = addButton.dataset.selectedSize || '';
+    if (!variantId) return;
+    saveBagItems(addToBag(getBagItems(), [{ id: variantId, quantity: 1 }]));
+    updateGlobalCartCount();
+    showToast(`Size ${size} added to your styling bag`);
+  });
+}
+
 function showToast(message: string) {
   const toast = document.getElementById('bag-status');
   if (toast) {

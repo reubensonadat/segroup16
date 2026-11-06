@@ -1598,7 +1598,7 @@ export class RunwaySection extends HTMLElement {
       details.innerHTML = `
         <h3>${matchedProd.name}</h3>
         <p>Size ${matchedSize} · Quantity ${entry.quantity} · $${matchedProd.price.toFixed(2)}</p>
-        <a href="${matchedProd.url}" target="_blank" rel="noopener noreferrer">View original piece ↗</a>
+        <a href="${matchedProd.url}">View piece details</a>
       `;
 
       const removeBtn = document.createElement('button');

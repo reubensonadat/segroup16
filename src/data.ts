@@ -67,7 +67,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 57015167189297, a: true, o: ['45'] },
       { id: 57015167222065, a: true, o: ['46'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/tatum-5-orbit-copy',
+    url: '#product?id=tatum-5-orbit-copy',
   },
   tshirt: {
     id: 'tshirt',
@@ -87,7 +87,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 56835911647537, a: true, o: ['M'] },
       { id: 56835911680305, a: true, o: ['XL'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/tshirt',
+    url: '#product?id=tshirt',
   },
   sweatshirt: {
     id: 'sweatshirt',
@@ -107,7 +107,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 56835806462257, a: true, o: ['M'] },
       { id: 56835806495025, a: true, o: ['XL'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/sweatshirt',
+    url: '#product?id=sweatshirt',
   },
   'tatum-5-orbit': {
     id: 'tatum-5-orbit',
@@ -130,7 +130,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 57015166894385, a: true, o: ['45'] },
       { id: 57015166927153, a: true, o: ['46'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/tatum-5-orbit',
+    url: '#product?id=tatum-5-orbit',
   },
   'hoodie-black': {
     id: 'hoodie-black',
@@ -150,7 +150,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 56836251746609, a: true, o: ['M'] },
       { id: 56836251779377, a: true, o: ['XL'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/hoodie-black',
+    url: '#product?id=hoodie-black',
   },
   'sweatshirt-plus': {
     id: 'sweatshirt-plus',
@@ -170,7 +170,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 56836143808817, a: true, o: ['M'] },
       { id: 56836143841585, a: true, o: ['XL'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/sweatshirt-plus',
+    url: '#product?id=sweatshirt-plus',
   },
   hoodie: {
     id: 'hoodie',
@@ -190,7 +190,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 56836002251057, a: true, o: ['M'] },
       { id: 56836002283825, a: true, o: ['XL'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/hoodie',
+    url: '#product?id=hoodie',
   },
   'air-jordan-12-retro-copy': {
     id: 'air-jordan-12-retro-copy',
@@ -213,7 +213,7 @@ export const PRODUCTS: Record<string, ProductItem> = {
       { id: 57015176528177, a: true, o: ['45'] },
       { id: 57015176560945, a: true, o: ['46'] },
     ],
-    url: 'https://nike-makknzjs.myshopify.com/products/air-jordan-12-retro-copy',
+    url: '#product?id=air-jordan-12-retro-copy',
   },
 };
 

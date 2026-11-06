@@ -68,13 +68,13 @@ function renderPanel(look: LookData, i: number) {
       return `
         <li class="rw__item" data-rw-card="${cardNum}" style="--i:${cardNum}" data-title="${prod.name}">
           ${tagHtml}
-          <a class="rw__media" href="${prod.url}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
+          <a class="rw__media" href="${prod.url}" tabindex="-1" aria-hidden="true">
             <img loading="lazy" decoding="async" alt="" width="400" height="${prod.height}" src="${prod.image}">
             <span class="rw__num">${cardNum}</span>
           </a>
           <div class="rw__info">
             <span class="rw__type">${prod.vendor}</span>
-            <a class="rw__name" href="${prod.url}" target="_blank" rel="noopener noreferrer">${prod.name}</a>
+            <a class="rw__name" href="${prod.url}">${prod.name}</a>
             <span class="rw__price"><span>${formatGhs(toGhs(prod.price))}</span></span>
           </div>
           <button class="rw__add" data-rw-add aria-expanded="false" aria-controls="${pickerId}" aria-label="Add to bag: ${prod.name}" data-added-label="Added to bag: ${prod.name}">
@@ -328,7 +328,7 @@ export function buildFullHtml(): string {
         <h2>Your styling bag</h2>
         <button id="close-bag" aria-label="Close styling bag">×</button>
       </div>
-      <p class="bag-note">A local outfit shortlist. No payment or order is collected here. Open a piece on the original demo to continue.</p>
+      <p class="bag-note">A local outfit shortlist. No payment or order is collected here. Continue exploring each piece right here in the runway.</p>
       <div id="bag-items"></div>
       <p id="bag-total"></p>
       <button id="export-bag">Download outfit shortlist</button>

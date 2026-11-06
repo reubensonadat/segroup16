@@ -5,6 +5,8 @@ import {
   renderOrbitPage,
   renderHandRailPage,
   renderGuidePage,
+  renderProductPage,
+  bindProductEvents,
   bindOrbitEvents,
   bindHandRailEvents,
 } from './pages/collection-pages';
@@ -23,9 +25,11 @@ export function initRouter() {
 
     // Parse query params if any (e.g. #track?id=RNW-2424)
     let orderIdParam: string | undefined;
+    let productIdParam: string | undefined;
     if (queryPart) {
       const params = new URLSearchParams(queryPart);
       orderIdParam = params.get('id') || undefined;
+      productIdParam = params.get('id') || undefined;
     }
 
     // Update active nav state
@@ -76,6 +80,9 @@ export function initRouter() {
       bindHandRailEvents(pageContainer);
     } else if (path === '#guide') {
       pageContainer.innerHTML = renderGuidePage();
+    } else if (path === '#product') {
+      pageContainer.innerHTML = renderProductPage(productIdParam);
+      bindProductEvents(pageContainer);
     } else {
       // Fallback to home
       if (runwaySection) runwaySection.style.display = 'block';

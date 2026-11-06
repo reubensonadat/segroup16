@@ -3512,7 +3512,8 @@ runway-section {
 .rail-img-wrap img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .rail-content {
@@ -4089,6 +4090,11 @@ runway-section {
   display: flex;
   gap: 6px;
   align-items: center;
+}
+
+.admin-actions-group .brand-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .admin-style-detail-content {
