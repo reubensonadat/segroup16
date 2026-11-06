@@ -1263,6 +1263,8 @@ runway-section {
 
 .rw__confirm {
   min-height: 46px;
+  width: 100%;
+  white-space: nowrap;
   border: none;
   border-radius: var(--rw-btn-radius, 0px);
   background: #151413;
@@ -1961,11 +1963,17 @@ runway-section {
 .rw-sheet-host .rw__picker-title {
   font-size: 12px;
   font-weight: 500;
+  order: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rw-sheet-host .rw__picker-price {
   font-size: 12px;
   color: var(--rw-muted, #66625c);
+  order: 1;
+  white-space: nowrap;
 }
 
 .rw-sheet-host .rw__picker-close {
@@ -3055,7 +3063,36 @@ runway-section {
 }
 
 @media (max-width: 800px) {
+  .admin-header-strip {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+  }
+
+  .admin-header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+
+  .admin-header-actions .brand-btn {
+    width: 100%;
+    min-height: 48px;
+    padding-inline: 10px;
+    text-align: center;
+  }
+
   .admin-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-header-actions {
     grid-template-columns: 1fr;
   }
 }
@@ -3173,6 +3210,7 @@ runway-section {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #767676;
+  white-space: nowrap;
 }
 
 .admin-orders-table td {
@@ -3212,6 +3250,7 @@ runway-section {
   align-items: center;
   gap: 8px;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .admin-item-chip img {
@@ -3538,6 +3577,16 @@ runway-section {
 @media (max-width: 768px) {
   .guide-cards {
     grid-template-columns: 1fr;
+  }
+
+  .admin-table-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-orders-table {
+    min-width: 900px;
   }
 }
 
@@ -4306,8 +4355,8 @@ runway-section {
 
 .orbit-action {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   margin-top: auto;
   padding-top: 16px;
@@ -4318,6 +4367,21 @@ runway-section {
   font-size: 18px;
   font-weight: 600;
   color: #151413;
+  white-space: nowrap;
+}
+
+.orbit-action .orbit-title {
+  margin: 0;
+  text-align: center;
+}
+
+.orbit-btn-add,
+.rail-add-btn {
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  padding-inline: 12px;
+  font-size: 12px;
 }
 
 /* ==========================================================================
@@ -4484,8 +4548,8 @@ runway-section {
 
 .rail-action-row {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   margin-top: auto;
   padding-top: 14px;
@@ -4496,4 +4560,10 @@ runway-section {
   font-size: 16px;
   font-weight: 600;
   color: #151413;
+  white-space: nowrap;
+}
+
+.rail-action-row .rail-product-title {
+  margin: 0;
+  text-align: center;
 }

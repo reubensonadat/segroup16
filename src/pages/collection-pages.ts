@@ -61,7 +61,6 @@ export function renderOrbitPage(): string {
           </div>
           <div class="orbit-meta">
             <span class="orbit-vendor">${item.vendor}</span>
-            <h2 class="orbit-title">${item.name}</h2>
             <p class="orbit-desc">${desc}</p>
             
             <div class="orbit-size-section">
@@ -73,6 +72,7 @@ export function renderOrbitPage(): string {
 
             <div class="orbit-action">
               <span class="orbit-price">${formatGhs(toGhs(item.price))}</span>
+              <h2 class="orbit-title">${item.name}</h2>
               <button
                 class="brand-btn orbit-btn-add"
                 data-add-shoe
@@ -226,7 +226,6 @@ export function renderHandRailPage(): string {
           </div>
           <div class="rail-product-meta">
             <span class="rail-product-type">${prod.type}</span>
-            <h3 class="rail-product-title">${prod.name}</h3>
             <p class="rail-product-desc">${desc}</p>
             
             <div class="rail-size-section">
@@ -238,6 +237,7 @@ export function renderHandRailPage(): string {
 
             <div class="rail-action-row">
               <span class="rail-product-price">${formatGhs(toGhs(prod.price))}</span>
+              <h3 class="rail-product-title">${prod.name}</h3>
               <button
                 class="brand-btn rail-add-btn"
                 data-add-garment

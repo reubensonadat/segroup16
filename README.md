@@ -40,7 +40,9 @@ Start the local development server:
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Vite will print the available local URL when it starts, typically
+`http://localhost:5173`. If that port is busy, Vite automatically selects the
+next available port.
 
 ## Verification
 

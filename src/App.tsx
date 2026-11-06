@@ -14,7 +14,6 @@ function Header() {
         <a href="#orbit">Nike Orbit</a>
         <a href="#hand-rail">Hand Rail Pro</a>
         <a href="#track">Track Order</a>
-        <a href="#guide">How It's Made</a>
         <a href="#admin" className="nav-admin-link">Admin</a>
       </nav>
       <a href="#cart" id="open-bag" aria-label="Open shopping cart">
