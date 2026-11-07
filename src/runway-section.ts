@@ -10,6 +10,7 @@ import {
   StylingBagItem,
 } from './runway-logic';
 import { LOOKS, PRODUCTS, ProductItem } from './data';
+import { formatGhs, toGhs } from './currency';
 
 const STORAGE_KEY = 'runway-styling-bag-v3';
 
@@ -1597,7 +1598,7 @@ export class RunwaySection extends HTMLElement {
 
       if (!matchedProd) return;
 
-      subtotal += matchedProd.price * entry.quantity;
+      subtotal += toGhs(matchedProd.price) * entry.quantity;
 
       const row = document.createElement('div');
       row.className = 'bag-row';
@@ -1610,7 +1611,7 @@ export class RunwaySection extends HTMLElement {
       details.className = 'bag-row-details';
       details.innerHTML = `
         <h3>${matchedProd.name}</h3>
-        <p>Size ${matchedSize} · Quantity ${entry.quantity} · $${matchedProd.price.toFixed(2)}</p>
+        <p>Size ${matchedSize} · Quantity ${entry.quantity} · ${formatGhs(toGhs(matchedProd.price))}</p>
         <a href="${matchedProd.url}">View piece details</a>
       `;
 
@@ -1632,7 +1633,7 @@ export class RunwaySection extends HTMLElement {
     });
 
     if (totalEl) {
-      totalEl.textContent = `Reference subtotal $${subtotal.toFixed(2)}`;
+      totalEl.textContent = `Subtotal: ${formatGhs(subtotal)}`;
     }
   }
 
