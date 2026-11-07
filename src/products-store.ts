@@ -104,6 +104,39 @@ export function saveManagedProducts(products: ManagedProduct[]): void {
   }
 }
 
+export interface ManagedProductPatch {
+  name?: string;
+  category?: string;
+  costPriceGhs?: number;
+  sellingPriceGhs?: number;
+  stockQuantity?: number;
+  image?: string;
+  sizes?: string[];
+  vendor?: string;
+}
+
+/**
+ * Full product editor backing store — merges a partial patch into a managed
+ * product (name, vendor, category, image, pricing, stock, sizes) and persists.
+ */
+export function updateManagedProduct(productId: string, patch: ManagedProductPatch): boolean {
+  const products = getManagedProducts();
+  const target = products.find((p) => p.id === productId);
+  if (!target) return false;
+
+  if (patch.name !== undefined && patch.name.trim()) target.name = patch.name.trim();
+  if (patch.category !== undefined && patch.category.trim()) target.category = patch.category.trim();
+  if (patch.vendor !== undefined) target.vendor = patch.vendor.trim();
+  if (patch.image !== undefined && patch.image.trim()) target.image = patch.image.trim();
+  if (patch.costPriceGhs !== undefined) target.costPriceGhs = Math.max(0, patch.costPriceGhs);
+  if (patch.sellingPriceGhs !== undefined) target.sellingPriceGhs = Math.max(0, patch.sellingPriceGhs);
+  if (patch.stockQuantity !== undefined) target.stockQuantity = Math.max(0, Math.round(patch.stockQuantity));
+  if (patch.sizes !== undefined) target.sizes = patch.sizes.map((s) => s.trim()).filter(Boolean);
+
+  saveManagedProducts(products);
+  return true;
+}
+
 export function updateProductPricing(
   productId: string,
   costPriceGhs: number,
