@@ -9,6 +9,7 @@ import { PRODUCTS } from '../data';
 import { formatGhs, toGhs } from '../currency';
 import { bindDropdowns, renderDropdown } from '../dropdown.tsx';
 import { getCreatorsKitReceiptUrl } from '../creators-kit';
+import { getBundleDiscountPercent, setBundleDiscountPercent } from '../bundle-store';
 
 export function renderAdminPage(): string {
   const orders = getOrders();
@@ -53,6 +54,11 @@ export function renderAdminPage(): string {
           </td>
           <td class="admin-td-payment">
             <div class="admin-pay-total">${formatGhs(toGhs(order.total))}</div>
+            ${
+              order.bundleDiscount
+                ? `<span class="admin-bundle-tag">★ Look Bundle (${order.bundleName || '3-Piece'}) −${formatGhs(toGhs(order.bundleDiscount))}</span>`
+                : ''
+            }
             <div class="admin-pay-method">${order.paymentMethod}</div>
           </td>
           <td class="admin-td-status">
@@ -123,6 +129,35 @@ export function renderAdminPage(): string {
         </div>
       </div>
 
+      <!-- Promotions & Look Bundle Settings -->
+      <div class="admin-promo-settings-card">
+        <div class="admin-promo-settings-head">
+          <div class="admin-promo-title-wrap">
+            <span class="admin-promo-badge">STORE & RUNWAY PROMOTIONS</span>
+            <h3>3D Runway Look Bundle Discount Engine</h3>
+            <p>Set the automatic package discount applied when customers bundle all 3 garments (top, pants, footwear) of any runway look.</p>
+          </div>
+          <div class="admin-promo-current-badge">
+            Active Discount: <strong id="admin-active-rate-badge">${getBundleDiscountPercent()}% OFF</strong>
+          </div>
+        </div>
+        <div class="admin-promo-controls">
+          <div class="admin-promo-input-group">
+            <label for="admin-bundle-rate-input">Look Bundle Discount (%):</label>
+            <input type="number" id="admin-bundle-rate-input" min="0" max="100" value="${getBundleDiscountPercent()}" class="brand-input admin-rate-input" />
+            <button id="admin-save-discount-btn" class="brand-btn brand-btn--dark brand-btn--sm">Save Rate</button>
+          </div>
+          <div class="admin-promo-presets">
+            <span>Quick Presets:</span>
+            <button class="admin-preset-btn" data-rate="0">0% (Off)</button>
+            <button class="admin-preset-btn" data-rate="10">10% (Default)</button>
+            <button class="admin-preset-btn" data-rate="15">15% (VIP)</button>
+            <button class="admin-preset-btn" data-rate="20">20% (Flash)</button>
+          </div>
+        </div>
+        <div id="admin-promo-feedback" class="admin-promo-feedback" hidden></div>
+      </div>
+
       <!-- Orders Table -->
       <div class="admin-table-container">
         <div class="admin-table-header">
@@ -173,6 +208,37 @@ export function bindAdminEvents(container: HTMLElement) {
     const newStatus = value as OrderStatus;
     updateOrderStatus(orderId, newStatus);
     dropdown.className = `dropdown-react-host admin-status-select admin-status--${newStatus.toLowerCase().replace(/\s+/g, '-')}`;
+  });
+
+  // Bundle Discount Rate Controls
+  const rateInput = container.querySelector('#admin-bundle-rate-input') as HTMLInputElement | null;
+  const saveRateBtn = container.querySelector('#admin-save-discount-btn');
+  const rateFeedback = container.querySelector('#admin-promo-feedback') as HTMLElement | null;
+  const activeRateBadge = container.querySelector('#admin-active-rate-badge');
+
+  const updateDiscount = (newPercent: number) => {
+    setBundleDiscountPercent(newPercent);
+    if (rateInput) rateInput.value = String(newPercent);
+    if (activeRateBadge) activeRateBadge.textContent = `${newPercent}% OFF`;
+    if (rateFeedback) {
+      rateFeedback.hidden = false;
+      rateFeedback.textContent = `✓ 3D Runway Look Bundle Discount updated to ${newPercent}%. Customers bundling complete outfits will automatically receive this discount at checkout!`;
+      setTimeout(() => {
+        rateFeedback.hidden = true;
+      }, 5000);
+    }
+  };
+
+  saveRateBtn?.addEventListener('click', () => {
+    const val = parseFloat(rateInput?.value || '10');
+    updateDiscount(isNaN(val) ? 10 : val);
+  });
+
+  container.querySelectorAll<HTMLButtonElement>('.admin-preset-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const rate = parseFloat(btn.dataset.rate || '10');
+      updateDiscount(rate);
+    });
   });
 
   // Seed / Reset demo orders

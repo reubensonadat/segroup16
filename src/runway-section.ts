@@ -11,6 +11,7 @@ import {
 } from './runway-logic';
 import { LOOKS, PRODUCTS, ProductItem } from './data';
 import { formatGhs, toGhs } from './currency';
+import { getBundleDiscountPercent } from './bundle-store';
 
 const STORAGE_KEY = 'runway-styling-bag-v3';
 
@@ -120,6 +121,8 @@ export class RunwaySection extends HTMLElement {
     this.initBag();
     this.measure(true);
     this.detectFeet();
+    this.syncBundleDiscounts();
+    window.addEventListener('runway:discount-updated', this.handleDiscountUpdated);
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const startOffset = prefersReduced ? 0 : 1.15;
@@ -188,6 +191,43 @@ export class RunwaySection extends HTMLElement {
       this.sheetHost.remove();
       this.sheetHost = null;
     }
+    window.removeEventListener('runway:discount-updated', this.handleDiscountUpdated);
+  }
+
+  private handleDiscountUpdated = () => {
+    this.syncBundleDiscounts();
+  };
+
+  public syncBundleDiscounts() {
+    const percent = getBundleDiscountPercent();
+    if (!this.panels) return;
+
+    this.panels.forEach((panel, i) => {
+      const look = LOOKS[i];
+      if (!look) return;
+      const bundleTotal = look.items.reduce((total, itemRef) => total + PRODUCTS[itemRef.productId].price, 0);
+      const discountMultiplier = percent > 0 ? (100 - percent) / 100 : 1;
+      const bundleDiscounted = bundleTotal * discountMultiplier;
+
+      const noteEl = panel.querySelector<HTMLElement>('.rw__bundle-note');
+      if (noteEl) {
+        noteEl.textContent = percent > 0 ? `Bundle all 3 and save ${percent}%` : 'Complete the 3-piece look';
+      }
+
+      const priceContainer = panel.querySelector<HTMLElement>('.rw__bundle-price');
+      if (priceContainer) {
+        if (percent > 0) {
+          priceContainer.innerHTML = `<s>${formatGhs(toGhs(bundleTotal))}</s> <strong>${formatGhs(toGhs(bundleDiscounted))}</strong>`;
+        } else {
+          priceContainer.innerHTML = `<strong>${formatGhs(toGhs(bundleTotal))}</strong>`;
+        }
+      }
+
+      const ctaMobile = panel.querySelector<HTMLElement>('.rw__cta-m');
+      if (ctaMobile) {
+        ctaMobile.textContent = `Add full look — ${formatGhs(toGhs(bundleDiscounted))}`;
+      }
+    });
   }
 
   /* ------------------------------------------------------------------------

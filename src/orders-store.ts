@@ -46,6 +46,8 @@ export interface Order {
   customer: CustomerInfo;
   items: OrderItem[];
   subtotal: number;
+  bundleDiscount?: number;
+  bundleName?: string;
   shipping: number;
   tax: number;
   total: number;
@@ -235,18 +237,23 @@ export function createOrder(
   subtotal: number,
   shipping = 0,
   tax = 0,
-  paymentMethod = 'Credit Card'
+  paymentMethod = 'Credit Card',
+  bundleDiscount = 0,
+  bundleName?: string
 ): Order {
   const randomNum = Math.floor(1000 + Math.random() * 9000);
+  const total = Math.max(0, Math.round((subtotal - bundleDiscount + shipping + tax) * 100) / 100);
   const newOrder: Order = {
     id: `RNW-${randomNum}`,
     createdAt: new Date().toISOString(),
     customer,
     items,
     subtotal,
+    bundleDiscount: bundleDiscount > 0 ? bundleDiscount : undefined,
+    bundleName,
     shipping,
     tax,
-    total: subtotal + shipping + tax,
+    total,
     status: 'Processing',
     paymentMethod,
   };

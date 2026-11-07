@@ -3,11 +3,16 @@ import './index.css';
 import './runway-section';
 import {initRouter} from './router';
 import {updateGlobalCartCount} from './pages/cart-page';
+import {getActiveBrand} from './brand-presets';
+
 function Header() {
+  const brand = getActiveBrand();
   return (
     <header className="site-header shopify-section-group-header-group">
-      <a href="#home" className="brand" aria-label="Home">
-        <img width="68" height="24" alt="Nike" src="https://reel-ref-try-the-look.vercel.app/assets/nike-logo.svg" />
+      <a href="#home" className="brand" aria-label={brand.name}>
+        <span style={{ fontWeight: 800, letterSpacing: '0.14em', fontSize: '1.05rem', textTransform: 'uppercase', color: '#151413' }}>
+          {brand.logoText}
+        </span>
       </a>
       <nav aria-label="Main navigation">
         <a href="#home" aria-current="page">Home</a>

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import { LOOKS, PRODUCTS, LookData } from '../src/data';
 import { formatGhs, toGhs } from '../src/currency';
+import { getActiveBrand } from '../src/brand-presets';
 
 function renderModelArt(look: LookData, i: number, isHero = false) {
   const lookNumber = i + 1;
@@ -179,6 +180,7 @@ export function buildFullHtml(): string {
 
   const panelsHtml = LOOKS.map((look, i) => renderPanel(look, i)).join('');
 
+  const brand = getActiveBrand();
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -204,8 +206,10 @@ export function buildFullHtml(): string {
       <div class="opening-bar" style="--col:6"></div>
     </div>
     <header class="site-header shopify-section-group-header-group">
-      <a href="#home" class="brand" aria-label="Home">
-        <img width="68" height="24" alt="Nike" src="https://reel-ref-try-the-look.vercel.app/assets/nike-logo.svg" />
+      <a href="#home" class="brand" aria-label="${brand.name}">
+        <span style="font-weight: 800; letter-spacing: 0.14em; font-size: 1.05rem; text-transform: uppercase; color: #151413;">
+          ${brand.logoText}
+        </span>
       </a>
       <nav aria-label="Main navigation">
         <a href="#home" aria-current="page">Home</a>

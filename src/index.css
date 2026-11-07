@@ -4983,3 +4983,206 @@ runway-section {
   margin: 0;
   text-align: center;
 }
+
+/* ==========================================================================
+   Outfit Bundle Package Discount & Admin Promo Engine
+   ========================================================================== */
+
+.cart-bundle-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #f4f8f4;
+  border: 1px solid #c2e2c2;
+  border-left: 4px solid #16a34a;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.cart-bundle-banner-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.cart-bundle-banner-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #15803d;
+  margin-bottom: 4px;
+}
+
+.cart-bundle-banner-text p {
+  margin: 0;
+  font-size: 13px;
+  color: #2b3b2b;
+  line-height: 1.45;
+}
+
+.cart-item-bundle-badge {
+  display: inline-block;
+  background: #eaf5ea;
+  color: #166534;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-top: 6px;
+  border: 1px solid #bbf7d0;
+}
+
+.cart-summary-line--discount {
+  color: #16a34a !important;
+  font-weight: 600;
+}
+
+.cart-bundle-pill {
+  display: inline-block;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.cart-discount-val {
+  font-weight: 700;
+  color: #16a34a;
+}
+
+/* Admin Promo Engine Card */
+.admin-promo-settings-card {
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  padding: 24px 28px;
+  margin-bottom: 32px;
+}
+
+.admin-promo-settings-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.admin-promo-badge {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: #71717a;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.admin-promo-title-wrap h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.admin-promo-title-wrap p {
+  margin: 0;
+  font-size: 13px;
+  color: #71717a;
+}
+
+.admin-promo-current-badge {
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #18181b;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.admin-promo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+
+.admin-promo-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-promo-input-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #27272a;
+}
+
+.admin-rate-input {
+  width: 90px;
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.admin-promo-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #71717a;
+}
+
+.admin-preset-btn {
+  background: #f4f4f5;
+  border: 1px solid #d4d4d8;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.admin-preset-btn:hover {
+  background: #18181b;
+  color: #ffffff;
+  border-color: #18181b;
+}
+
+.admin-promo-feedback {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.admin-bundle-tag {
+  display: inline-block;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-top: 4px;
+}
+
+.track-calc-row--discount {
+  color: #16a34a !important;
+  font-weight: 600;
+}
+
+.track-discount-val {
+  font-weight: 700;
+  color: #16a34a;
+}
+

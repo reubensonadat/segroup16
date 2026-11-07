@@ -5,6 +5,8 @@ import { formatGhs, toGhs } from '../currency';
 import { bindDropdowns } from '../dropdown.tsx';
 import { detectCustomerLocation } from '../location';
 import { fetchRoadRoute } from '../lib/roadRoute';
+import { analyzeCartBundles } from '../bundle-store';
+import { getActiveBrand } from '../brand-presets';
 
 const STORAGE_KEY = 'runway-styling-bag-v3';
 
@@ -55,6 +57,10 @@ export function renderCartPage(): string {
     `;
   }
 
+  const activeBrand = getActiveBrand();
+  const bundleAnalysis = analyzeCartBundles(items);
+  const totalBundleDiscount = bundleAnalysis.totalBundleDiscountGhs;
+
   let subtotal = 0;
   const lineItemsHtml = items
     .map((entry) => {
@@ -75,6 +81,11 @@ export function renderCartPage(): string {
       const lineTotal = toGhs(matchedProd.price) * entry.quantity;
       subtotal += lineTotal;
 
+      const isBundled = bundleAnalysis.bundledVariantIds.has(entry.id);
+      const matchedBundle = bundleAnalysis.bundles.find((b) =>
+        b.items.some((bi) => bi.variantId === entry.id)
+      );
+
       return `
         <div class="cart-item-row" data-variant-id="${entry.id}">
           <div class="cart-item-media">
@@ -85,6 +96,11 @@ export function renderCartPage(): string {
             <h3 class="cart-item-title">${matchedProd.name}</h3>
             <span class="cart-item-size">Size: <strong>${matchedSize}</strong></span>
             <span class="cart-item-price">${formatGhs(toGhs(matchedProd.price))} each</span>
+            ${
+              isBundled && matchedBundle
+                ? `<span class="cart-item-bundle-badge">★ Part of ${matchedBundle.lookName} Package (${matchedBundle.discountPercent}% OFF)</span>`
+                : ''
+            }
           </div>
           <div class="cart-item-qty">
             <button class="cart-qty-btn" data-cart-action="dec" data-id="${entry.id}" aria-label="Decrease quantity">−</button>
@@ -100,7 +116,23 @@ export function renderCartPage(): string {
     })
     .join('');
 
-  const total = subtotal;
+  const total = Math.max(0, subtotal - totalBundleDiscount);
+
+  const bundleBannerHtml =
+    bundleAnalysis.bundles.length > 0
+      ? `
+        <div class="cart-bundle-banner">
+          <div class="cart-bundle-banner-icon">✨</div>
+          <div class="cart-bundle-banner-text">
+            <strong>Complete Runway Outfit Package Unlocked!</strong>
+            <p>
+              You bundled all 3 pieces from <strong>${bundleAnalysis.bundles.map((b) => b.lookName).join(' & ')}</strong>.
+              A <strong>${bundleAnalysis.bundles[0].discountPercent}% Runway Bundle Discount (${formatGhs(totalBundleDiscount)})</strong> has been automatically deducted from your cart!
+            </p>
+          </div>
+        </div>
+      `
+      : '';
 
   return `
     <div class="brand-page cart-page">
@@ -111,6 +143,7 @@ export function renderCartPage(): string {
 
       <div class="cart-layout">
         <div class="cart-items-container">
+          ${bundleBannerHtml}
           <div class="cart-items-head">
             <span>Item & Details</span>
             <span>Quantity</span>
@@ -128,6 +161,19 @@ export function renderCartPage(): string {
             <span>Subtotal</span>
             <span>${formatGhs(subtotal)}</span>
           </div>
+          ${
+            totalBundleDiscount > 0
+              ? `
+              <div class="cart-summary-line cart-summary-line--discount">
+                <span>
+                  Look Bundle Discount (${bundleAnalysis.bundles[0].discountPercent}%)
+                  <span class="cart-bundle-pill">COMPLETE LOOK</span>
+                </span>
+                <span class="cart-discount-val">−${formatGhs(totalBundleDiscount)}</span>
+              </div>
+            `
+              : ''
+          }
           <div class="cart-summary-line">
             <span>Shipping</span>
             <span class="cart-free-tag">Free Express</span>
@@ -149,7 +195,7 @@ export function renderCartPage(): string {
           </button>
 
           <div class="cart-perks">
-            <div>✓ Official Nikey Authenticity Guaranteed</div>
+            <div>✓ Official ${activeBrand.name} Authenticity Guaranteed</div>
             <div>✓ 30-Day Complimentary Returns</div>
             <div>✓ Encrypted SSL Checkout</div>
           </div>
@@ -527,8 +573,22 @@ export function bindCartEvents(container: HTMLElement) {
 
     const paymentMethod = paymentRadio?.value || 'MTN Mobile Money';
 
+    // Calculate bundle discount if customer bundled a complete 3-piece look
+    const bundleAnalysis = analyzeCartBundles(currentItems);
+    const bundleDiscountUsd = bundleAnalysis.totalBundleDiscountGhs / 10;
+    const bundleName = bundleAnalysis.bundles.map((b) => b.lookName).join(', ');
+
     // Create and save real order
-    const created = createOrder(customer, orderItems, subtotal, 0, 0, paymentMethod);
+    const created = createOrder(
+      customer,
+      orderItems,
+      subtotal,
+      0,
+      0,
+      paymentMethod,
+      bundleDiscountUsd,
+      bundleName || undefined
+    );
 
     // Empty bag
     saveBagItems([]);

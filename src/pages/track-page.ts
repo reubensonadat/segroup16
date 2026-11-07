@@ -1,8 +1,10 @@
 import { getOrders, Order } from '../orders-store';
 import { formatGhs, toGhs } from '../currency';
 import { getCreatorsKitReceiptUrl } from '../creators-kit';
+import { getActiveBrand } from '../brand-presets';
 
 export function renderTrackPage(orderIdParam?: string): string {
+  const brand = getActiveBrand();
   const orders = getOrders();
 
   // If orderIdParam is provided or from hash, find it; otherwise default to most recent order or seed
@@ -165,7 +167,7 @@ export function renderTrackPage(orderIdParam?: string): string {
           <img src="${item.image}" alt="${item.name}" />
         </div>
         <div class="track-item-details">
-          <span class="track-item-vendor">Official Nike Runway Edition</span>
+          <span class="track-item-vendor">Official ${brand.name} Edition</span>
           <h3 class="track-item-title">${item.name}</h3>
           <div class="track-item-meta">
             <span>Size: <strong>${item.size}</strong></span>
@@ -266,6 +268,16 @@ export function renderTrackPage(orderIdParam?: string): string {
               <span>Subtotal</span>
               <span>${formatGhs(toGhs(activeOrder.subtotal))}</span>
             </div>
+            ${
+              activeOrder.bundleDiscount && activeOrder.bundleDiscount > 0
+                ? `
+                <div class="track-calc-row track-calc-row--discount">
+                  <span>Look Outfit Bundle Discount ${activeOrder.bundleName ? `(${activeOrder.bundleName})` : ''}</span>
+                  <span class="track-discount-val">−${formatGhs(toGhs(activeOrder.bundleDiscount))}</span>
+                </div>
+              `
+                : ''
+            }
             <div class="track-calc-row">
               <span>Express Shipping</span>
               <span class="track-free">Free</span>
