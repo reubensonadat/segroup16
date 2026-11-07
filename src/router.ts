@@ -47,6 +47,7 @@ export function initRouter() {
     });
 
     if (path === '#home' || path === '#runway' || path === '#' || path === '' || path === './') {
+      document.body.classList.remove('is-admin-view');
       if (runwaySection) runwaySection.style.display = 'block';
       if (pageContainer) {
         pageContainer.style.display = 'none';
@@ -56,7 +57,8 @@ export function initRouter() {
       return;
     }
 
-    // Secondary pages
+    // Secondary pages — remove admin isolation unless it's admin
+    if (path !== '#admin') document.body.classList.remove('is-admin-view');
     if (runwaySection) runwaySection.style.display = 'none';
     if (!pageContainer) return;
 
@@ -70,6 +72,7 @@ export function initRouter() {
       pageContainer.innerHTML = renderTrackPage(orderIdParam);
       bindTrackEvents(pageContainer);
     } else if (path === '#admin') {
+      document.body.classList.add('is-admin-view');
       pageContainer.innerHTML = renderAdminPage();
       bindAdminEvents(pageContainer);
     } else if (path === '#orbit') {
