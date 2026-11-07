@@ -98,7 +98,7 @@ export function renderCartPage(): string {
             <span class="cart-item-price">${formatGhs(toGhs(matchedProd.price))} each</span>
             ${
               isBundled && matchedBundle
-                ? `<span class="cart-item-bundle-badge">★ Part of ${matchedBundle.lookName} Package (${matchedBundle.discountPercent}% OFF)</span>`
+                ? `<span class="cart-item-bundle-badge">Part of ${matchedBundle.lookName} Package (${matchedBundle.discountPercent}% OFF)</span>`
                 : ''
             }
           </div>
@@ -122,9 +122,8 @@ export function renderCartPage(): string {
     bundleAnalysis.bundles.length > 0
       ? `
         <div class="cart-bundle-banner">
-          <div class="cart-bundle-banner-icon">✨</div>
           <div class="cart-bundle-banner-text">
-            <strong>Complete Runway Outfit Package Unlocked!</strong>
+            <strong>Complete Runway Outfit Package Unlocked</strong>
             <p>
               You bundled all 3 pieces from <strong>${bundleAnalysis.bundles.map((b) => b.lookName).join(' & ')}</strong>.
               A <strong>${bundleAnalysis.bundles[0].discountPercent}% Runway Bundle Discount (${formatGhs(totalBundleDiscount)})</strong> has been automatically deducted from your cart!

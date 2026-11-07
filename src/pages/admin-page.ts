@@ -56,7 +56,7 @@ export function renderAdminPage(): string {
             <div class="admin-pay-total">${formatGhs(toGhs(order.total))}</div>
             ${
               order.bundleDiscount
-                ? `<span class="admin-bundle-tag">★ Look Bundle (${order.bundleName || '3-Piece'}) −${formatGhs(toGhs(order.bundleDiscount))}</span>`
+                ? `<span class="admin-bundle-tag">Look Bundle (${order.bundleName || '3-Piece'}) −${formatGhs(toGhs(order.bundleDiscount))}</span>`
                 : ''
             }
             <div class="admin-pay-method">${order.paymentMethod}</div>
