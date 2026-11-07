@@ -30,7 +30,15 @@ export interface CustomerInfo {
   fulfillment?: 'pickup' | 'delivery';
 }
 
-export type OrderStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+export type OrderStatus =
+  | 'Processing'
+  | 'Shipped'
+  | 'In Transit'
+  | 'Out for Delivery'
+  | 'Ready for Pickup'
+  | 'Delivered'
+  | 'Collected'
+  | 'Cancelled';
 
 export interface Order {
   id: string;
@@ -49,6 +57,35 @@ const ORDERS_STORAGE_KEY = 'runway-orders-v1';
 
 const SEED_ORDERS: Order[] = [
   {
+    id: 'RNW-5299',
+    createdAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(), // 20 mins ago
+    customer: {
+      fullName: 'Reubenson Adat',
+      phone: '0243270509',
+      street: 'GPS: 5.11538, -1.30110',
+      city: 'Accra',
+      country: 'Ghana',
+      fulfillment: 'delivery',
+    },
+    items: [
+      {
+        id: 57015167090993,
+        productId: 'tatum-5-orbit-copy',
+        name: 'Air Jordan 12 Retro',
+        size: '40',
+        price: 39.9,
+        quantity: 1,
+        image: 'https://reel-ref-try-the-look.vercel.app/assets/source-tatum-5-orbit-copy.webp',
+      },
+    ],
+    subtotal: 39.9,
+    shipping: 0.0,
+    tax: 0.0,
+    total: 39.9,
+    status: 'Delivered',
+    paymentMethod: 'Mobile Money (MTN MoMo)',
+  },
+  {
     id: 'RNW-9284',
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 mins ago
     customer: {
@@ -58,6 +95,7 @@ const SEED_ORDERS: Order[] = [
       city: 'New York, NY',
       postalCode: '10013',
       country: 'United States',
+      fulfillment: 'delivery',
     },
     items: [
       {
@@ -96,6 +134,7 @@ const SEED_ORDERS: Order[] = [
       city: 'Los Angeles, CA',
       postalCode: '90015',
       country: 'United States',
+      fulfillment: 'delivery',
     },
     items: [
       {
@@ -130,7 +169,7 @@ const SEED_ORDERS: Order[] = [
     shipping: 0.0,
     tax: 43.76,
     total: 590.76,
-    status: 'Shipped',
+    status: 'Out for Delivery',
     paymentMethod: 'Visa (•••• 4419)',
   },
   {
@@ -139,10 +178,10 @@ const SEED_ORDERS: Order[] = [
     customer: {
       fullName: 'Stefan Kowalski',
       email: 'stefan.k@nordic.de',
-      street: 'Friedrichstraße 118',
-      city: 'Berlin',
-      postalCode: '10117',
-      country: 'Germany',
+      street: 'Accra Mall Boutique Front Desk',
+      city: 'Accra',
+      country: 'Ghana',
+      fulfillment: 'pickup',
     },
     items: [
       {
@@ -159,7 +198,7 @@ const SEED_ORDERS: Order[] = [
     shipping: 0.0,
     tax: 15.92,
     total: 214.92,
-    status: 'Delivered',
+    status: 'Ready for Pickup',
     paymentMethod: 'Mastercard (•••• 8102)',
   },
 ];
@@ -238,15 +277,17 @@ export function getOrderStats() {
   const totalOrders = orders.length;
   const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const processingCount = orders.filter((o) => o.status === 'Processing').length;
-  const shippedCount = orders.filter((o) => o.status === 'Shipped').length;
-  const deliveredCount = orders.filter((o) => o.status === 'Delivered').length;
+  const inProgressCount = orders.filter((o) =>
+    ['Shipped', 'In Transit', 'Out for Delivery', 'Ready for Pickup'].includes(o.status)
+  ).length;
+  const completedCount = orders.filter((o) => o.status === 'Delivered' || o.status === 'Collected').length;
 
   return {
     totalRevenue,
     totalOrders,
     aov,
     processingCount,
-    shippedCount,
-    deliveredCount,
+    shippedCount: inProgressCount,
+    deliveredCount: completedCount,
   };
 }

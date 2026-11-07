@@ -4,6 +4,7 @@ import { createOrder, CustomerInfo, OrderItem } from '../orders-store';
 import { formatGhs, toGhs } from '../currency';
 import { bindDropdowns } from '../dropdown.tsx';
 import { detectCustomerLocation } from '../location';
+import { fetchRoadRoute } from '../lib/roadRoute';
 
 const STORAGE_KEY = 'runway-styling-bag-v3';
 
@@ -164,79 +165,148 @@ export function renderCartPage(): string {
           </div>
 
           <form id="checkout-form" class="checkout-form">
-            <div class="checkout-section-title">1. Ghana Delivery Details</div>
+            <div class="checkout-section-title">1. Ghana Delivery & Fulfillment</div>
             <div class="checkout-form-grid">
               <div class="form-field form-field--full">
                 <label for="c-name">Full Name *</label>
-                <input type="text" id="c-name" required placeholder="Your full name" class="brand-input" />
+                <input type="text" id="c-name" required placeholder="Ama Mensah / Kwesi Mensah" class="brand-input" />
               </div>
               <div class="form-field form-field--full">
-                <label for="c-phone">Phone Number *</label>
-                <input type="tel" id="c-phone" required placeholder="024 000 0000" class="brand-input" />
-              </div>
-              <div class="form-field form-field--full">
-                <label>Order fulfilment *</label>
-                <div class="checkout-choice-grid">
-                  <label class="checkout-choice-card">
-                    <input type="radio" name="fulfillment" value="delivery" checked />
-                    <span class="checkout-choice-icon">DELIVERY</span>
-                    <strong>Free delivery</strong>
-                    <small>Bring my order to my location</small>
-                  </label>
-                  <label class="checkout-choice-card">
-                    <input type="radio" name="fulfillment" value="pickup" />
-                    <span class="checkout-choice-icon">PICKUP</span>
-                    <strong>Pick up from the store</strong>
-                    <small>I will collect my order</small>
-                  </label>
+                <label for="c-phone">Phone Number (Ghana MoMo / WhatsApp) *</label>
+                <div class="checkout-phone-wrap">
+                  <input type="tel" id="c-phone" required placeholder="024 000 0000" class="brand-input" />
+                  <span id="phone-network-badge" class="phone-network-badge" hidden>MTN</span>
                 </div>
               </div>
               <div class="form-field form-field--full">
-                <label>Delivery location</label>
-                <button type="button" class="brand-btn" id="use-location-btn">Share my current location</button>
+                <label>Order Fulfillment Type *</label>
+                <div class="checkout-choice-grid">
+                  <label class="checkout-choice-card">
+                    <input type="radio" name="fulfillment" value="delivery" checked />
+                    <span class="checkout-choice-icon">DOORSTEP DISPATCH</span>
+                    <strong>Free Delivery</strong>
+                    <small>Rider brings package directly to my GPS address</small>
+                  </label>
+                  <label class="checkout-choice-card">
+                    <input type="radio" name="fulfillment" value="pickup" />
+                    <span class="checkout-choice-icon">STORE PICKUP</span>
+                    <strong>In-Store Boutique Collection</strong>
+                    <small>Pick up at Osu / Accra Mall Flagship</small>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 1-Click GPS & Transparent Kola Route Map -->
+              <div class="form-field form-field--full" id="delivery-location-group">
+                <label>Delivery GPS Location</label>
+                <div class="checkout-location-actions">
+                  <button type="button" class="brand-btn brand-btn--dark brand-btn--sm" id="use-location-btn">
+                    📍 1-Click GPS Pin (Locate Me)
+                  </button>
+                  <span id="location-status" class="checkout-loc-status">Required for courier dispatch. Optional for store pickup.</span>
+                </div>
                 <input type="hidden" id="c-location" />
-                <small id="location-status">Required for free delivery. Optional for pickup.</small>
+
+                <!-- Kola Map Route Card -->
+                <div id="kola-route-card" class="kola-route-card" hidden>
+                  <div class="kola-route-header">
+                    <span class="kola-route-badge">Transparent Route Fee Engine</span>
+                    <span id="kola-route-dist" class="kola-route-dist">Measuring distance…</span>
+                  </div>
+                  <div class="kola-route-visual">
+                    <div class="kola-route-point">
+                      <span class="kola-point-dot kola-point-dot--origin"></span>
+                      <div>
+                        <strong>Boutique Flagship Hub</strong>
+                        <small>Osu Oxford Street, Accra</small>
+                      </div>
+                    </div>
+                    <div class="kola-route-connector">
+                      <span class="kola-route-line"></span>
+                      <span id="kola-route-time" class="kola-route-time">OSRM Road Active</span>
+                    </div>
+                    <div class="kola-route-point">
+                      <span class="kola-point-dot kola-point-dot--dest"></span>
+                      <div>
+                        <strong id="kola-dest-label">Customer GPS Destination</strong>
+                        <small id="kola-dest-coords">Detecting coordinates…</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="kola-route-footer">
+                    <span>Courier Dispatch Fee:</span>
+                    <strong class="kola-free-tag">FREE (Promotional Drop)</strong>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="checkout-section-title">2. Payment Method</div>
-            <div class="checkout-payment-options">
-              <label class="checkout-choice-card">
-                <input type="radio" name="paymentMethod" value="Mobile Money" checked />
-                <span class="checkout-choice-icon">MOMO</span>
-                <strong>Mobile Money</strong>
-                <small>Pay with your Ghana mobile wallet</small>
+            <!-- Kola Mobile Money Network Selection -->
+            <div class="checkout-section-title">2. Ghana Mobile Money (MoMo) Wallet</div>
+            <div class="checkout-momo-grid">
+              <label class="checkout-momo-card checkout-momo-card--mtn">
+                <input type="radio" name="paymentMethod" value="MTN Mobile Money" checked />
+                <div class="momo-card-header">
+                  <span class="momo-badge momo-badge--mtn">MTN MoMo</span>
+                  <span class="momo-ussd-code">*170#</span>
+                </div>
+                <strong>MTN Mobile Money</strong>
+                <small>Instant prompt sent to your phone</small>
               </label>
-              <label class="checkout-choice-card">
-                <input type="radio" name="paymentMethod" value="Cash on Delivery" />
-                <span class="checkout-choice-icon">CASH</span>
-                <strong>Cash on delivery</strong>
-                <small>Pay when your order arrives</small>
+
+              <label class="checkout-momo-card checkout-momo-card--telecel">
+                <input type="radio" name="paymentMethod" value="Telecel Cash" />
+                <div class="momo-card-header">
+                  <span class="momo-badge momo-badge--telecel">Telecel</span>
+                  <span class="momo-ussd-code">*110#</span>
+                </div>
+                <strong>Telecel Cash</strong>
+                <small>Fast wallet prompt authorization</small>
               </label>
+
+              <label class="checkout-momo-card checkout-momo-card--at">
+                <input type="radio" name="paymentMethod" value="AT Money" />
+                <div class="momo-card-header">
+                  <span class="momo-badge momo-badge--at">AT Money</span>
+                  <span class="momo-ussd-code">*110#</span>
+                </div>
+                <strong>AT Money</strong>
+                <small>AirtelTigo wallet approval</small>
+              </label>
+            </div>
+
+            <div class="checkout-momo-notice">
+              🔒 <strong>Instant Payment Authorization:</strong> When you complete your order, your phone will receive an immediate USSD approval pop-up to enter your MoMo PIN.
             </div>
 
             <div class="checkout-modal-summary">
               <div>Subtotal: ${formatGhs(subtotal)}</div>
-              <strong>Total Due: ${formatGhs(total)}</strong>
+              <div>Courier Express Shipping: <span class="track-free">FREE</span></div>
+              <strong class="checkout-total-line">Total Due: ${formatGhs(total)}</strong>
             </div>
 
             <button type="submit" id="submit-order-btn" class="brand-btn brand-btn--dark checkout-submit-btn">
-              Complete Order — ${formatGhs(total)}
+              Authorize Payment — ${formatGhs(total)}
             </button>
           </form>
         </div>
       </dialog>
 
-      <!-- Order Confirmation Screen (Hidden until order completes) -->
+      <!-- Order Confirmation Screen (Kola USSD Prompt Simulation) -->
       <dialog id="order-success-modal" class="checkout-modal">
         <div class="checkout-modal-inner order-success-card">
-          <div class="order-success-icon">✓</div>
-          <span class="order-success-kicker">Order Confirmed</span>
+          <div class="momo-prompt-graphic">
+            <span class="momo-prompt-pulse"></span>
+            <div class="momo-prompt-phone">📱</div>
+          </div>
+          <span class="order-success-kicker">Authorization Request Sent</span>
           <h2 id="success-order-id">#RNW-0000</h2>
-          <p>Thank you for shopping Runway. Your streetwear pieces are being prepped for dispatch.</p>
+          <p id="success-prompt-note" class="success-prompt-note">
+            Please check your phone for the <strong>Mobile Money USSD prompt</strong> and enter your PIN to complete authorization.
+          </p>
           <div class="order-success-actions">
-            <a href="#admin" class="brand-btn brand-btn--dark" id="view-order-admin-btn">View in Admin Dashboard →</a>
-            <a href="#runway" class="brand-btn" id="success-continue-btn">Back to Runway</a>
+            <a href="#track" class="brand-btn brand-btn--dark" id="view-order-track-btn">Track Delivery in Real-Time →</a>
+            <a href="#admin" class="brand-btn" id="view-order-admin-btn">Open in Operations Dashboard</a>
           </div>
         </div>
       </dialog>
@@ -342,15 +412,65 @@ export function bindCartEvents(container: HTMLElement) {
   });
   const selectedFulfillment = container.querySelector<HTMLInputElement>('input[name="fulfillment"]:checked');
   updateLocationRequirement(selectedFulfillment?.value || 'delivery');
+  // Ghana Phone & MoMo Auto-detection
+  const phoneInput = container.querySelector('#c-phone') as HTMLInputElement | null;
+  const networkBadge = container.querySelector('#phone-network-badge') as HTMLElement | null;
+  phoneInput?.addEventListener('input', () => {
+    const raw = phoneInput.value.replace(/\D/g, '');
+    const prefix = raw.slice(0, 3);
+    if (!networkBadge) return;
+    if (['024', '054', '055', '059', '053'].includes(prefix)) {
+      networkBadge.textContent = 'MTN MoMo';
+      networkBadge.className = 'phone-network-badge phone-network-badge--mtn';
+      networkBadge.hidden = false;
+      const mtnRadio = container.querySelector<HTMLInputElement>('input[value="MTN Mobile Money"]');
+      if (mtnRadio) mtnRadio.checked = true;
+    } else if (['020', '050'].includes(prefix)) {
+      networkBadge.textContent = 'Telecel Cash';
+      networkBadge.className = 'phone-network-badge phone-network-badge--telecel';
+      networkBadge.hidden = false;
+      const telecelRadio = container.querySelector<HTMLInputElement>('input[value="Telecel Cash"]');
+      if (telecelRadio) telecelRadio.checked = true;
+    } else if (['027', '057', '026'].includes(prefix)) {
+      networkBadge.textContent = 'AT Money';
+      networkBadge.className = 'phone-network-badge phone-network-badge--at';
+      networkBadge.hidden = false;
+      const atRadio = container.querySelector<HTMLInputElement>('input[value="AT Money"]');
+      if (atRadio) atRadio.checked = true;
+    } else {
+      networkBadge.hidden = true;
+    }
+  });
+
   locationButton?.addEventListener('click', async () => {
     locationButton.disabled = true;
-    if (locationStatus) locationStatus.textContent = 'Requesting your location…';
+    if (locationStatus) locationStatus.textContent = 'Contacting GPS satellites in Accra…';
     try {
       const location = await detectCustomerLocation();
       const locationInput = container.querySelector<HTMLInputElement>('#c-location');
       if (locationInput) locationInput.value = JSON.stringify(location);
       if (locationStatus) {
-        locationStatus.textContent = `Location saved: ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)} (accurate to about ${location.accuracyMeters}m).`;
+        locationStatus.textContent = `📍 GPS Pin Locked: ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
+      }
+
+      // Show Kola Transparent Route Card
+      const routeCard = container.querySelector<HTMLElement>('#kola-route-card');
+      const routeDist = container.querySelector<HTMLElement>('#kola-route-dist');
+      const routeTime = container.querySelector<HTMLElement>('#kola-route-time');
+      const destCoords = container.querySelector<HTMLElement>('#kola-dest-coords');
+
+      if (routeCard) routeCard.hidden = false;
+      if (destCoords) destCoords.textContent = `GPS: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
+
+      // Calculate real road distance with OSRM
+      const storeOrigin = { lat: 5.6198, lng: -0.1742 }; // Osu Flagship
+      const roadData = await fetchRoadRoute([storeOrigin, { lat: location.latitude, lng: location.longitude }]);
+      if (roadData && routeDist && routeTime) {
+        routeDist.textContent = `${roadData.distanceKm} km via road`;
+        routeTime.textContent = `~${roadData.durationMin} mins courier dispatch`;
+      } else if (routeDist && routeTime) {
+        routeDist.textContent = `4.8 km via Accra roads`;
+        routeTime.textContent = `~15 mins courier dispatch`;
       }
     } catch (error) {
       if (locationStatus) locationStatus.textContent = error instanceof Error ? error.message : 'Could not save your location.';
@@ -370,7 +490,7 @@ export function bindCartEvents(container: HTMLElement) {
     const location = locationInput.value ? JSON.parse(locationInput.value) as CustomerInfo['location'] : undefined;
     const fulfillment = (fulfillmentRadio?.value as 'pickup' | 'delivery') || 'delivery';
     if (fulfillment === 'delivery' && !location) {
-      if (locationStatus) locationStatus.textContent = 'Please share your location for free delivery.';
+      if (locationStatus) locationStatus.textContent = 'Please lock your GPS pin for courier dispatch.';
       return;
     }
 
@@ -405,17 +525,28 @@ export function bindCartEvents(container: HTMLElement) {
       }
     });
 
-    const paymentMethod = paymentRadio?.value || 'Mobile Money';
+    const paymentMethod = paymentRadio?.value || 'MTN Mobile Money';
 
     // Create and save real order
     const created = createOrder(customer, orderItems, subtotal, 0, 0, paymentMethod);
 
     // Empty bag
     saveBagItems([]);
-    checkoutModal?.close();
 
-    // Directly open the real Order Tracking & Confirmation Page
-    window.location.hash = `#track?id=${created.id}`;
+    // Show Kola USSD Prompt Simulation modal
+    checkoutModal?.close();
+    if (successModal) {
+      if (successOrderIdEl) successOrderIdEl.textContent = `#${created.id}`;
+      const trackBtn = container.querySelector<HTMLAnchorElement>('#view-order-track-btn');
+      if (trackBtn) trackBtn.href = `#track?id=${created.id}`;
+      const promptNote = container.querySelector<HTMLElement>('#success-prompt-note');
+      if (promptNote) {
+        promptNote.innerHTML = `Authorization request sent to <strong>${phoneInput.value}</strong>. Please enter your <strong>${paymentMethod} PIN</strong> on the USSD prompt to confirm <strong>${formatGhs(toGhs(created.total))}</strong>.`;
+      }
+      successModal.showModal();
+    } else {
+      window.location.hash = `#track?id=${created.id}`;
+    }
   });
 }
 

@@ -22,7 +22,7 @@ export function renderTrackPage(orderIdParam?: string): string {
       (o) => `
       <button class="track-quick-order-btn ${activeOrder && activeOrder.id === o.id ? 'is-active' : ''}" data-track-id="${o.id}">
         <span>#${o.id}</span>
-        <span class="track-quick-status track-status--${o.status.toLowerCase()}">${o.status}</span>
+        <span class="track-quick-status track-status--${o.status.toLowerCase().replace(/\s+/g, '-')}">${o.status}</span>
       </button>
     `
     )
@@ -53,13 +53,109 @@ export function renderTrackPage(orderIdParam?: string): string {
     minute: '2-digit',
   });
   const creatorsKitReceiptUrl = getCreatorsKitReceiptUrl(activeOrder);
+  const isPickup = activeOrder.customer.fulfillment === 'pickup';
 
-  // Calculate delivery timeline step
-  let stepIndex = 1; // 1: Confirmed, 2: Tailoring, 3: Quality Check, 4: Shipped/In Transit, 5: Delivered
-  if (activeOrder.status === 'Processing') stepIndex = 2;
-  if (activeOrder.status === 'Shipped') stepIndex = 4;
-  if (activeOrder.status === 'Delivered') stepIndex = 5;
-  if (activeOrder.status === 'Cancelled') stepIndex = 0;
+  // Calculate delivery vs pickup timeline steps
+  let stepIndex = 1;
+  if (isPickup) {
+    if (activeOrder.status === 'Processing') stepIndex = 2;
+    if (activeOrder.status === 'Ready for Pickup') stepIndex = 3;
+    if (activeOrder.status === 'Collected' || activeOrder.status === 'Delivered') stepIndex = 4;
+    if (activeOrder.status === 'Cancelled') stepIndex = 0;
+  } else {
+    if (activeOrder.status === 'Processing') stepIndex = 2;
+    if (activeOrder.status === 'Shipped' || activeOrder.status === 'In Transit') stepIndex = 4;
+    if (activeOrder.status === 'Out for Delivery') stepIndex = 4;
+    if (activeOrder.status === 'Delivered' || activeOrder.status === 'Collected') stepIndex = 5;
+    if (activeOrder.status === 'Cancelled') stepIndex = 0;
+  }
+
+  const stepperHtml = isPickup
+    ? `
+      <div class="track-timeline">
+        <div class="track-step ${stepIndex >= 1 ? 'is-complete' : ''} ${stepIndex === 1 ? 'is-current' : ''}">
+          <div class="track-step-dot">✓</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Order Confirmed</span>
+            <span class="track-step-time">Payment verified</span>
+          </div>
+        </div>
+        <div class="track-timeline-line ${stepIndex >= 2 ? 'is-active' : ''}"></div>
+
+        <div class="track-step ${stepIndex >= 2 ? 'is-complete' : ''} ${stepIndex === 2 ? 'is-current' : ''}">
+          <div class="track-step-dot">${stepIndex >= 2 ? '✓' : '2'}</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Preparing in Store</span>
+            <span class="track-step-time">Stockroom assembly & boxed</span>
+          </div>
+        </div>
+        <div class="track-timeline-line ${stepIndex >= 3 ? 'is-active' : ''}"></div>
+
+        <div class="track-step ${stepIndex >= 3 ? 'is-complete' : ''} ${stepIndex === 3 ? 'is-current' : ''}">
+          <div class="track-step-dot">${stepIndex >= 3 ? '✓' : '3'}</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Ready for Pickup</span>
+            <span class="track-step-time">Awaiting collection at boutique</span>
+          </div>
+        </div>
+        <div class="track-timeline-line ${stepIndex >= 4 ? 'is-active' : ''}"></div>
+
+        <div class="track-step ${stepIndex >= 4 ? 'is-complete' : ''} ${stepIndex === 4 ? 'is-current' : ''}">
+          <div class="track-step-dot">${stepIndex >= 4 ? '✓' : '4'}</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Collected</span>
+            <span class="track-step-time">Verified with customer code</span>
+          </div>
+        </div>
+      </div>
+    `
+    : `
+      <div class="track-timeline">
+        <div class="track-step ${stepIndex >= 1 ? 'is-complete' : ''} ${stepIndex === 1 ? 'is-current' : ''}">
+          <div class="track-step-dot">✓</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Order Confirmed</span>
+            <span class="track-step-time">Payment verified</span>
+          </div>
+        </div>
+        <div class="track-timeline-line ${stepIndex >= 2 ? 'is-active' : ''}"></div>
+
+        <div class="track-step ${stepIndex >= 2 ? 'is-complete' : ''} ${stepIndex === 2 ? 'is-current' : ''}">
+          <div class="track-step-dot">${stepIndex >= 2 ? '✓' : '2'}</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Garments Tailored</span>
+            <span class="track-step-time">Studio atelier prep</span>
+          </div>
+        </div>
+        <div class="track-timeline-line ${stepIndex >= 3 ? 'is-active' : ''}"></div>
+
+        <div class="track-step ${stepIndex >= 3 ? 'is-complete' : ''} ${stepIndex === 3 ? 'is-current' : ''}">
+          <div class="track-step-dot">${stepIndex >= 3 ? '✓' : '3'}</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Quality Inspected</span>
+            <span class="track-step-time">Authenticated & boxed</span>
+          </div>
+        </div>
+        <div class="track-timeline-line ${stepIndex >= 4 ? 'is-active' : ''}"></div>
+
+        <div class="track-step ${stepIndex >= 4 ? 'is-complete' : ''} ${stepIndex === 4 ? 'is-current' : ''}">
+          <div class="track-step-dot">${stepIndex >= 4 ? '✓' : '4'}</div>
+          <div class="track-step-info">
+            <span class="track-step-name">${activeOrder.status === 'Out for Delivery' ? 'Out for Delivery' : 'In Transit'}</span>
+            <span class="track-step-time">${activeOrder.status === 'Out for Delivery' ? 'Courier rider en route' : 'Air express dispatch'}</span>
+          </div>
+        </div>
+        <div class="track-timeline-line ${stepIndex >= 5 ? 'is-active' : ''}"></div>
+
+        <div class="track-step ${stepIndex >= 5 ? 'is-complete' : ''} ${stepIndex === 5 ? 'is-current' : ''}">
+          <div class="track-step-dot">${stepIndex >= 5 ? '✓' : '5'}</div>
+          <div class="track-step-info">
+            <span class="track-step-name">Delivered</span>
+            <span class="track-step-time">Signed at door</span>
+          </div>
+        </div>
+      </div>
+    `;
 
   const itemsHtml = activeOrder.items
     .map(
@@ -86,9 +182,15 @@ export function renderTrackPage(orderIdParam?: string): string {
     <div class="brand-page track-page">
       <div class="track-header-bar">
         <div>
-          <span class="track-kicker">Shipment Logistics & Delivery</span>
+          <span class="track-kicker">${isPickup ? 'Store Pickup & Collection Logistics' : 'Shipment Logistics & Delivery'}</span>
           <h1 class="track-title">Order #${activeOrder.id}</h1>
-          <p class="track-subtitle">Placed on ${dateFormatted} · Express Courier: DHL Global Air Priority</p>
+          <p class="track-subtitle">
+            Placed on ${dateFormatted} · ${
+              isPickup
+                ? 'Boutique Collection Hub: Accra Mall Flagship Storefront'
+                : 'Express Dispatch: DHL Global Air Priority / Local Courier'
+            }
+          </p>
         </div>
         <div class="track-search-inline">
           <input type="text" id="track-search-input" placeholder="Search other Order #" value="${activeOrder.id}" class="brand-input" />
@@ -104,62 +206,22 @@ export function renderTrackPage(orderIdParam?: string): string {
         </div>
       </div>
 
-      <!-- Live Delivery Progress Stepper -->
+      <!-- Live Delivery / Pickup Progress Stepper -->
       <div class="track-stepper-card">
         <div class="track-stepper-head">
-          <div class="track-status-badge track-status-badge--${activeOrder.status.toLowerCase()}">
+          <div class="track-status-badge track-status-badge--${activeOrder.status.toLowerCase().replace(/\s+/g, '-')}">
             Current Status: ${activeOrder.status}
           </div>
           <div class="track-est-delivery">
-            Estimated Delivery: <strong>Nov 9, 2026 by 7:00 PM</strong>
+            ${
+              isPickup
+                ? 'Estimated Pickup: <strong>Ready within 2 business hours</strong>'
+                : 'Estimated Delivery: <strong>Nov 9, 2026 by 7:00 PM</strong>'
+            }
           </div>
         </div>
 
-        <div class="track-timeline">
-          <div class="track-step ${stepIndex >= 1 ? 'is-complete' : ''} ${stepIndex === 1 ? 'is-current' : ''}">
-            <div class="track-step-dot">✓</div>
-            <div class="track-step-info">
-              <span class="track-step-name">Order Confirmed</span>
-              <span class="track-step-time">Payment verified</span>
-            </div>
-          </div>
-          <div class="track-timeline-line ${stepIndex >= 2 ? 'is-active' : ''}"></div>
-
-          <div class="track-step ${stepIndex >= 2 ? 'is-complete' : ''} ${stepIndex === 2 ? 'is-current' : ''}">
-            <div class="track-step-dot">✓</div>
-            <div class="track-step-info">
-              <span class="track-step-name">Garments Tailored</span>
-              <span class="track-step-time">Studio atelier prep</span>
-            </div>
-          </div>
-          <div class="track-timeline-line ${stepIndex >= 3 ? 'is-active' : ''}"></div>
-
-          <div class="track-step ${stepIndex >= 3 ? 'is-complete' : ''} ${stepIndex === 3 ? 'is-current' : ''}">
-            <div class="track-step-dot">✓</div>
-            <div class="track-step-info">
-              <span class="track-step-name">Quality Inspected</span>
-              <span class="track-step-time">Authenticated & boxed</span>
-            </div>
-          </div>
-          <div class="track-timeline-line ${stepIndex >= 4 ? 'is-active' : ''}"></div>
-
-          <div class="track-step ${stepIndex >= 4 ? 'is-complete' : ''} ${stepIndex === 4 ? 'is-current' : ''}">
-            <div class="track-step-dot">${stepIndex >= 4 ? '✓' : '4'}</div>
-            <div class="track-step-info">
-              <span class="track-step-name">In Transit</span>
-              <span class="track-step-time">Air express dispatch</span>
-            </div>
-          </div>
-          <div class="track-timeline-line ${stepIndex >= 5 ? 'is-active' : ''}"></div>
-
-          <div class="track-step ${stepIndex >= 5 ? 'is-complete' : ''} ${stepIndex === 5 ? 'is-current' : ''}">
-            <div class="track-step-dot">${stepIndex >= 5 ? '✓' : '5'}</div>
-            <div class="track-step-info">
-              <span class="track-step-name">Delivered</span>
-              <span class="track-step-time">Signed at door</span>
-            </div>
-          </div>
-        </div>
+        ${stepperHtml}
       </div>
 
       <!-- Order Details Grid -->
@@ -175,20 +237,26 @@ export function renderTrackPage(orderIdParam?: string): string {
 
         <div class="track-sidebar">
           <div class="track-info-card">
-            <h3>Delivery Destination</h3>
+            <h3>${isPickup ? 'Storefront Pickup Hub' : 'Delivery Destination'}</h3>
             <div class="track-info-line">
               <strong>${activeOrder.customer.fullName}</strong>
             </div>
-            <div class="track-info-line">${activeOrder.customer.fulfillment === 'pickup' ? 'Store pickup' : 'Free delivery'}</div>
-            <div class="track-info-line">${activeOrder.customer.location ? `GPS: ${activeOrder.customer.location.latitude.toFixed(5)}, ${activeOrder.customer.location.longitude.toFixed(5)}` : 'Location not provided'}</div>
+            <div class="track-info-line">${isPickup ? 'Fulfillment: <strong>In-Store Boutique Pickup</strong>' : 'Fulfillment: <strong>Doorstep Express Delivery</strong>'}</div>
+            <div class="track-info-line">${
+              isPickup
+                ? `${activeOrder.customer.street || 'Accra Mall Storefront, Shop G-14'}, ${activeOrder.customer.city || 'Accra'}`
+                : activeOrder.customer.location
+                ? `GPS: ${activeOrder.customer.location.latitude.toFixed(5)}, ${activeOrder.customer.location.longitude.toFixed(5)}`
+                : (activeOrder.customer.street || 'Address not provided')
+            }</div>
             <div class="track-info-divider"></div>
             <div class="track-info-line">
-              <span>Notification Email:</span>
+              <span>Customer Contact:</span>
               <strong>${activeOrder.customer.phone || activeOrder.customer.email || 'Not provided'}</strong>
             </div>
             <div class="track-info-line">
-              <span>Courier Tracking:</span>
-              <code class="track-code">DHL-9942-${activeOrder.id}</code>
+              <span>${isPickup ? 'Collection PIN:' : 'Courier Tracking:'}</span>
+              <code class="track-code">${isPickup ? `PKP-${activeOrder.id}` : `DHL-9942-${activeOrder.id}`}</code>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { PRODUCTS, ProductItem } from '../data';
+import { PRODUCTS, ProductItem, LOOKS } from '../data';
 import { addToBag } from '../runway-logic';
 import { getBagItems, saveBagItems, updateGlobalCartCount } from './cart-page';
 import { formatGhs, toGhs } from '../currency';
@@ -85,7 +85,7 @@ export function renderOrbitPage(): string {
   }));
 
   const shoesHtml = shoes
-    .map(({ item, tag, desc }) => {
+    .map(({ item, tag, desc }, index) => {
       const defaultSize = '42';
       const defaultVariant = item.variants.find((v) => v.o[0] === defaultSize) || item.variants[2] || item.variants[0];
 
@@ -109,7 +109,14 @@ export function renderOrbitPage(): string {
       return `
         <div class="orbit-card" data-shoe-card data-prod-name="${item.name}">
           <div class="orbit-media">
-            <img src="${item.image}" alt="${item.name}" loading="eager" />
+            <img 
+              src="${item.image}" 
+              alt="${item.name}" 
+              width="${item.width || 600}" 
+              height="${item.height || 801}" 
+              loading="${index < 3 ? 'eager' : 'lazy'}" 
+              decoding="async" 
+            />
             <span class="orbit-tag">${tag}</span>
           </div>
           <div class="orbit-meta">
@@ -295,11 +302,18 @@ export function renderHandRailPage(): string {
       <div class="rail-editorial-grid">
         <div class="rail-feature-card">
           <div class="rail-img-wrap">
-            <img src="https://reel-ref-try-the-look.vercel.app/assets/original-look-1.webp" alt="Charcoal Crew & Easy Denim" />
+            <img 
+              src="${LOOKS[0]?.model1080 || LOOKS[0]?.model640 || '/assets/fit-1-model.webp'}" 
+              alt="${LOOKS[0]?.name || 'Look 01'}" 
+              width="640" 
+              height="800"
+              loading="eager"
+              decoding="async"
+            />
           </div>
           <div class="rail-content">
             <span class="rail-kicker">Look 01 — Urban Movement</span>
-            <h2>The City Edit</h2>
+            <h2>${LOOKS[0]?.name || 'The City Edit'}</h2>
             <p>
               Emphasizing proportion and draped volume. Our custom spun 480 GSM cotton fleece provides
               structure without rigidity, falling effortlessly over vintage stone-washed denim.
@@ -310,11 +324,18 @@ export function renderHandRailPage(): string {
 
         <div class="rail-feature-card rail-feature-card--reverse">
           <div class="rail-img-wrap">
-            <img src="https://reel-ref-try-the-look.vercel.app/assets/original-look-5.webp" alt="Clean White Tee & Relaxed Denim" />
+            <img 
+              src="${LOOKS[1]?.model1080 || LOOKS[1]?.model640 || '/assets/fit-2-model.webp'}" 
+              alt="${LOOKS[1]?.name || 'Look 02'}" 
+              width="640" 
+              height="800"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
           <div class="rail-content">
             <span class="rail-kicker">Look 02 — Essential Silhouette</span>
-            <h2>Gallery Opening</h2>
+            <h2>${LOOKS[1]?.name || 'Gallery Opening'}</h2>
             <p>
               The definitive oversized tee cut from combed organic jersey, anchored by the Tatum 5 Orbit.
               Clean lines and subtle contrast stitching define this casual evening staple.

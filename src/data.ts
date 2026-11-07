@@ -47,7 +47,32 @@ export interface LookData {
 
 function createFitProducts(): Record<string, ProductItem> {
   const products: Record<string, ProductItem> = {};
-  const cardNameOverrides: Record<string, string> = {};
+  
+  const itemSpecs: Record<string, { name: string; price: number; type: string }> = {
+    'fit-1-shirt': { name: 'Charcoal Heavy Knit Crew', price: 28.9, type: 'Heavyweight Knit' },
+    'fit-1-pants': { name: 'Vintage Washed Relaxed Denim', price: 34.9, type: 'Selvedge Denim' },
+    'fit-1-shoes': { name: 'Nike Orbit Agility Low', price: 36.9, type: 'Kinetic Footwear' },
+
+    'fit-2-shirt': { name: 'Combed Organic Boxy Tee', price: 15.9, type: 'Organic Jersey' },
+    'fit-2-pants': { name: 'Easy Straight Leg Chino', price: 24.9, type: 'Daily Tailoring' },
+    'fit-2-shoes': { name: "Air Force 1 '07 Retro", price: 39.9, type: 'Classic Footwear' },
+
+    'fit-3-shirt': { name: 'Technical Mock Neck Longsleeve', price: 22.9, type: 'Performance Knit' },
+    'fit-3-pants': { name: 'Pleated Tailored Trouser', price: 32.9, type: 'Architectural Pleat' },
+    'fit-3-shoes': { name: 'Nike Pegasus Runway Edition', price: 42.9, type: 'Performance Runner' },
+
+    'fit-4-shirt': { name: 'French Terry Zip Overshirt', price: 31.9, type: 'Layering Outerwear' },
+    'fit-4-pants': { name: 'Architectural Cargo Pants', price: 29.9, type: 'Technical Cargo' },
+    'fit-4-shoes': { name: 'Nike Dunk Low Grey Fog', price: 38.9, type: 'Low Silhouette' },
+
+    'fit-5-shirt': { name: 'Minimalist Boxy Heavy Tee', price: 16.9, type: 'Drop Shoulder Tee' },
+    'fit-5-pants': { name: 'Relaxed Nylon Track Pant', price: 26.9, type: 'Technical Track' },
+    'fit-5-shoes': { name: 'Nike Air Max Triple Black', price: 44.9, type: 'Air Cushion Footwear' },
+
+    'fit-6-shirt': { name: 'Layered Atelier Poplin Shirt', price: 27.9, type: 'Tailored Poplin' },
+    'fit-6-pants': { name: 'Heavyweight Carpenter Denim', price: 36.9, type: 'Workwear Denim' },
+    'fit-6-shoes': { name: 'Handcrafted Heritage Lug Boot', price: 59.9, type: 'Leather Footwear' },
+  };
 
   for (let fit = 1; fit <= 6; fit += 1) {
     for (const [type, suffix, optionLegend, sizes] of [
@@ -56,13 +81,14 @@ function createFitProducts(): Record<string, ProductItem> {
       ['shoes', 4, 'Shoe size', ['40', '41', '42', '43', '44', '45', '46']],
     ] as const) {
       const id = `fit-${fit}-${type}`;
+      const spec = itemSpecs[id];
       const variantStart = 70000000000000 + fit * 1000 + suffix * 100;
       products[id] = {
         id,
-        name: cardNameOverrides[id] || `Fit ${fit} ${type[0].toUpperCase()}${type.slice(1)}`,
-        type: `Fit ${fit} lookbook`,
+        name: spec?.name || `Fit ${fit} ${type[0].toUpperCase()}${type.slice(1)}`,
+        type: spec?.type || `Fit ${fit} lookbook`,
         vendor: 'Nike',
-        price: type === 'shoes' ? 39.9 : type === 'pants' ? 24.9 : 19.9,
+        price: spec?.price ?? (type === 'shoes' ? 39.9 : type === 'pants' ? 24.9 : 19.9),
         image: `/assets/fit-${fit}-${type}.webp`,
         width: type === 'shoes' ? 600 : 400,
         height: type === 'shoes' ? 801 : 536,
@@ -262,9 +288,9 @@ export const LOOKS: LookData[] = [
     model1080: '/assets/fit-1-model.webp',
     probe: '/assets/fit-1-model.webp',
     pins: [
-      { index: 1, product: 'Fit 1 Shirt', left: '48%', top: '48%' },
-      { index: 2, product: 'Fit 1 Pants', left: '48%', top: '70%' },
-      { index: 3, product: 'Fit 1 Shoes', left: '48%', top: '91%' },
+      { index: 1, product: 'Charcoal Heavy Knit Crew', left: '48%', top: '48%' },
+      { index: 2, product: 'Vintage Washed Relaxed Denim', left: '48%', top: '70%' },
+      { index: 3, product: 'Nike Orbit Agility Low', left: '48%', top: '91%' },
     ],
     items: [
       { productId: 'fit-1-shirt' },
@@ -282,9 +308,9 @@ export const LOOKS: LookData[] = [
     model1080: '/assets/fit-2-model.webp',
     probe: '/assets/fit-2-model.webp',
     pins: [
-      { index: 1, product: 'Fit 2 Shirt', left: '48%', top: '48%' },
-      { index: 2, product: 'Fit 2 Pants', left: '48%', top: '70%' },
-      { index: 3, product: 'Fit 2 Shoes', left: '48%', top: '91%' },
+      { index: 1, product: 'Combed Organic Boxy Tee', left: '48%', top: '48%' },
+      { index: 2, product: 'Easy Straight Leg Chino', left: '48%', top: '70%' },
+      { index: 3, product: "Air Force 1 '07 Retro", left: '48%', top: '91%' },
     ],
     items: [
       { productId: 'fit-2-shirt' },
@@ -302,9 +328,9 @@ export const LOOKS: LookData[] = [
     model1080: '/assets/fit-3-model.webp',
     probe: '/assets/fit-3-model.webp',
     pins: [
-      { index: 1, product: 'Fit 3 Shirt', left: '48%', top: '48%' },
-      { index: 2, product: 'Fit 3 Pants', left: '48%', top: '70%' },
-      { index: 3, product: 'Fit 3 Shoes', left: '48%', top: '91%' },
+      { index: 1, product: 'Technical Mock Neck Longsleeve', left: '48%', top: '48%' },
+      { index: 2, product: 'Pleated Tailored Trouser', left: '48%', top: '70%' },
+      { index: 3, product: 'Nike Pegasus Runway Edition', left: '48%', top: '91%' },
     ],
     items: [
       { productId: 'fit-3-shirt' },
@@ -322,9 +348,9 @@ export const LOOKS: LookData[] = [
     model1080: '/assets/fit-4-model.webp',
     probe: '/assets/fit-4-model.webp',
     pins: [
-      { index: 1, product: 'Fit 4 Shirt', left: '48%', top: '48%' },
-      { index: 2, product: 'Fit 4 Pants', left: '48%', top: '70%' },
-      { index: 3, product: 'Fit 4 Shoes', left: '48%', top: '91%' },
+      { index: 1, product: 'French Terry Zip Overshirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Architectural Cargo Pants', left: '48%', top: '70%' },
+      { index: 3, product: 'Nike Dunk Low Grey Fog', left: '48%', top: '91%' },
     ],
     items: [
       { productId: 'fit-4-shirt' },
@@ -342,9 +368,9 @@ export const LOOKS: LookData[] = [
     model1080: '/assets/fit-5-model.webp',
     probe: '/assets/fit-5-model.webp',
     pins: [
-      { index: 1, product: 'Fit 5 Shirt', left: '48%', top: '48%' },
-      { index: 2, product: 'Fit 5 Pants', left: '48%', top: '70%' },
-      { index: 3, product: 'Fit 5 Shoes', left: '48%', top: '91%' },
+      { index: 1, product: 'Minimalist Boxy Heavy Tee', left: '48%', top: '48%' },
+      { index: 2, product: 'Relaxed Nylon Track Pant', left: '48%', top: '70%' },
+      { index: 3, product: 'Nike Air Max Triple Black', left: '48%', top: '91%' },
     ],
     items: [
       { productId: 'fit-5-shirt' },
@@ -362,9 +388,9 @@ export const LOOKS: LookData[] = [
     model1080: '/assets/fit-6-model.webp',
     probe: '/assets/fit-6-model.webp',
     pins: [
-      { index: 1, product: 'Fit 6 Shirt', left: '48%', top: '48%' },
-      { index: 2, product: 'Fit 6 Pants', left: '48%', top: '70%' },
-      { index: 3, product: 'Fit 6 Shoes', left: '48%', top: '91%' },
+      { index: 1, product: 'Layered Atelier Poplin Shirt', left: '48%', top: '48%' },
+      { index: 2, product: 'Heavyweight Carpenter Denim', left: '48%', top: '70%' },
+      { index: 3, product: 'Handcrafted Heritage Lug Boot', left: '48%', top: '91%' },
     ],
     items: [
       { productId: 'fit-6-shirt' },

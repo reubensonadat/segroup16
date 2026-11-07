@@ -57,15 +57,23 @@ export function renderAdminPage(): string {
           </td>
           <td class="admin-td-status">
             ${renderDropdown(
-              [
-                { value: 'Processing', label: 'Processing', icon: 'processing' },
-                { value: 'Shipped', label: 'Shipped', icon: 'shipment' },
-                { value: 'Delivered', label: 'Delivered', icon: 'delivered' },
-                { value: 'Cancelled', label: 'Cancelled', icon: 'cancelled' },
-              ],
+              order.customer.fulfillment === 'pickup'
+                ? [
+                    { value: 'Processing', label: 'Processing (Store)', icon: 'processing' },
+                    { value: 'Ready for Pickup', label: 'Ready for Pickup', icon: 'shipment' },
+                    { value: 'Collected', label: 'Collected', icon: 'delivered' },
+                    { value: 'Cancelled', label: 'Cancelled', icon: 'cancelled' },
+                  ]
+                : [
+                    { value: 'Processing', label: 'Processing (Atelier)', icon: 'processing' },
+                    { value: 'In Transit', label: 'In Transit (Courier)', icon: 'shipment' },
+                    { value: 'Out for Delivery', label: 'Out for Delivery', icon: 'shipment' },
+                    { value: 'Delivered', label: 'Delivered', icon: 'delivered' },
+                    { value: 'Cancelled', label: 'Cancelled', icon: 'cancelled' },
+                  ],
               order.status,
               `data-status-for="${order.id}"`,
-              `admin-status-select admin-status--${order.status.toLowerCase()}`
+              `admin-status-select admin-status--${order.status.toLowerCase().replace(/\s+/g, '-')}`
             )}
           </td>
           <td class="admin-td-actions">
@@ -164,7 +172,7 @@ export function bindAdminEvents(container: HTMLElement) {
     if (!orderId) return;
     const newStatus = value as OrderStatus;
     updateOrderStatus(orderId, newStatus);
-    dropdown.className = `dropdown-react-host admin-status-select admin-status--${newStatus.toLowerCase()}`;
+    dropdown.className = `dropdown-react-host admin-status-select admin-status--${newStatus.toLowerCase().replace(/\s+/g, '-')}`;
   });
 
   // Seed / Reset demo orders
