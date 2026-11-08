@@ -299,3 +299,4 @@ export class SupabaseStoreRepository implements StoreConfigRepository {
 ```
 
 Because all views (Runway, Cart, Checkout, Admin) call `getStoreConfig()` and `updateStoreConfig()`, **not a single line of UI code needs to be changed** when moving to a live production database.
+

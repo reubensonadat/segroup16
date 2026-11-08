@@ -88,3 +88,4 @@ test('calculateShippingFee handles pickup, toggle, and free threshold math', () 
   assert.equal(promoDrop.feeGhs, 0);
   assert.equal(promoDrop.isFree, true);
 });
+

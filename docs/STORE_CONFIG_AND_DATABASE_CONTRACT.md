@@ -108,3 +108,4 @@ export class SupabaseStoreConfigRepository implements StoreConfigRepository {
   - `analyzeCartBundles applies per-look discount overrides when configured`
 - **TypeScript**: `npx tsc --noEmit` clean (0 errors).
 - **Vite Production Build**: `npm run build` succeeds in 688ms.
+
