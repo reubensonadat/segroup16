@@ -282,38 +282,45 @@ function renderMiniOrdersTable(orders: ReturnType<typeof getOrders>): string {
 function renderLinkedItemRow(
   slotNum: number,
   slotLabel: string,
-  prod: ManagedProduct | undefined
+  prod: ManagedProduct | undefined,
+  lookId?: number
 ): string {
   if (!prod) {
     return `
-      <div class="ap-linked-item-row ap-linked-item-row--missing">
+      <div class="ap-linked-item-row ap-linked-item-row--missing" ${lookId ? `data-configure-slot="${lookId}" style="cursor: pointer;" title="Configure Look ${lookId}"` : ''}>
         <span class="ap-item-num">${slotNum}</span>
         <div class="ap-item-thumb ap-item-thumb--empty">${ic.plus}</div>
         <div class="ap-item-details">
           <span class="ap-item-slot-tag">${slotLabel}</span>
           <div class="ap-item-name">Not Linked</div>
-          <div class="ap-item-type">Open configurator to attach a garment</div>
+          <div class="ap-item-type">Click to configure & attach a garment</div>
         </div>
         <div class="ap-item-price">—</div>
       </div>
     `;
   }
 
-  const linkable = Boolean(PRODUCTS[prod.id]);
   const inner = `
     <span class="ap-item-num">${slotNum}</span>
     <div class="ap-item-thumb"><img src="${prod.image}" alt="${prod.name}" loading="lazy" /></div>
     <div class="ap-item-details">
       <span class="ap-item-slot-tag">${slotLabel}</span>
       <div class="ap-item-name">${prod.name}</div>
-      <div class="ap-item-type">${prod.vendor || prod.category}${linkable ? ' · VIEW PIECE ↗' : ''}</div>
+      <div class="ap-item-type">${prod.vendor || prod.category} · EDIT DETAILS</div>
     </div>
-    <div class="ap-item-price">${formatGhs(prod.sellingPriceGhs)}</div>
+    <div class="ap-item-price-col">
+      <div class="ap-item-price">${formatGhs(prod.sellingPriceGhs)}</div>
+      <button type="button" class="brand-btn brand-btn--sm ap-edit-mini-btn" data-edit-prod="${prod.id}" title="Edit ${prod.name} details">
+        ${ic.edit}
+      </button>
+    </div>
   `;
 
-  return linkable
-    ? `<a class="ap-linked-item-row" href="#product?id=${prod.id}" title="Inspect ${prod.name}">${inner}</a>`
-    : `<div class="ap-linked-item-row">${inner}</div>`;
+  return `
+    <div class="ap-linked-item-row ap-linked-item-row--interactive" data-edit-prod="${prod.id}" style="cursor: pointer;" title="Customize ${prod.name} details">
+      ${inner}
+    </div>
+  `;
 }
 
 function renderProductsSection(): string {
@@ -341,16 +348,16 @@ function renderProductsSection(): string {
       let modeBadge = '3-PIECE OUTFIT';
       let modeCount = '3/3';
       let linkedItemsHtml = `
-        ${renderLinkedItemRow(1, 'TOP', topProd)}
-        ${renderLinkedItemRow(2, 'BOTTOM', btmProd)}
-        ${renderLinkedItemRow(3, 'SHOES', shoeProd)}
+        ${renderLinkedItemRow(1, 'TOP', topProd, lookId)}
+        ${renderLinkedItemRow(2, 'BOTTOM', btmProd, lookId)}
+        ${renderLinkedItemRow(3, 'SHOES', shoeProd, lookId)}
       `;
       let priceFootHtml = '';
 
       if (lookMode === 1) {
         modeBadge = '1-PIECE HERO';
         modeCount = `${topProd ? 1 : 0}/1`;
-        linkedItemsHtml = renderLinkedItemRow(1, 'HERO PRODUCT', topProd);
+        linkedItemsHtml = renderLinkedItemRow(1, 'HERO PRODUCT', topProd, lookId);
         const margin = topPrice > 0 ? Math.round(((topPrice - (topProd?.costPriceGhs || 0)) / topPrice) * 100) : 0;
         priceFootHtml = `
           <div class="ap-outfit-price-foot">
@@ -368,8 +375,8 @@ function renderProductsSection(): string {
         modeBadge = '2-PIECE SET';
         modeCount = `${[topProd, btmProd].filter(Boolean).length}/2`;
         linkedItemsHtml = `
-          ${renderLinkedItemRow(1, 'PIECE 1', topProd)}
-          ${renderLinkedItemRow(2, 'PIECE 2', btmProd)}
+          ${renderLinkedItemRow(1, 'PIECE 1', topProd, lookId)}
+          ${renderLinkedItemRow(2, 'PIECE 2', btmProd, lookId)}
         `;
         const sum2 = topPrice + btmPrice;
         const sav2 = Math.round(sum2 * (bundleDiscount / 100));
@@ -1619,6 +1626,23 @@ export function renderAdminPage(): string {
       <dialog id="admin-style-modal" class="checkout-modal">
         <div class="checkout-modal-inner" id="admin-style-body"></div>
       </dialog>
+
+      <!-- Brutalist Slide-Up Modal: Configure Look & Garment Editor -->
+      <div id="ap-look-config-modal" class="ap-slide-modal-wrap" aria-hidden="true">
+        <button type="button" class="ap-slide-backdrop" id="ap-look-backdrop" aria-label="Close modal"></button>
+        <div class="ap-slide-card" role="dialog" aria-modal="true" aria-labelledby="ap-modal-title">
+          <div class="ap-slide-head">
+            <div>
+              <span class="ap-kicker" id="ap-modal-slot-kicker">RUNWAY CONFIGURATOR</span>
+              <h2 id="ap-modal-title">Configure Look</h2>
+            </div>
+            <button type="button" class="ap-close-btn" id="ap-modal-close-btn" aria-label="Close modal">${ic.close}</button>
+          </div>
+          <div class="ap-slide-scroll" id="ap-modal-body">
+            <!-- Dynamic form injected by openOutfitModal() or openProductEditModal() -->
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -2493,17 +2517,21 @@ export function bindAdminEvents(container: HTMLElement): void {
       if (ok) {
         const pc = document.getElementById('page-content');
         if (pc) {
+          const wasAllGarments = container.querySelector('.ap-subtab.is-active')?.getAttribute('data-subtab') === 'all-garments';
           pc.innerHTML = renderAdminPage();
           bindAdminEvents(pc);
           activateNav('ap-products');
-          pc.querySelector<HTMLButtonElement>('.ap-subtab[data-subtab="all-garments"]')?.click();
+          if (wasAllGarments) {
+            pc.querySelector<HTMLButtonElement>('.ap-subtab[data-subtab="all-garments"]')?.click();
+          }
         }
       }
     });
   };
 
-  container.querySelectorAll<HTMLButtonElement>('[data-edit-prod]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+  container.querySelectorAll<HTMLElement>('[data-edit-prod]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       openProductEditModal(btn.getAttribute('data-edit-prod') || '');
     });
   });
@@ -2511,6 +2539,9 @@ export function bindAdminEvents(container: HTMLElement): void {
   // Close modal events
   container.querySelector('#ap-modal-close-btn')?.addEventListener('click', closeOutfitModal);
   container.querySelector('#ap-look-backdrop')?.addEventListener('click', closeOutfitModal);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeOutfitModal();
+  });
 
   /* ── Order Receipt Modal ── */
   const modal = container.querySelector('#admin-detail-modal') as HTMLDialogElement | null;

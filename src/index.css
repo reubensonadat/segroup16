@@ -6705,13 +6705,28 @@ body.ap-no-scroll {
   border-top: none;
 }
 
+.ap-linked-item-row--interactive:hover,
 a.ap-linked-item-row:hover {
   background: rgba(21, 20, 19, 0.06);
 }
 
+.ap-linked-item-row--interactive:hover .ap-item-name,
 a.ap-linked-item-row:hover .ap-item-name {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.ap-item-price-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ap-edit-mini-btn {
+  padding: 4px 6px;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .ap-linked-item-row--missing {
