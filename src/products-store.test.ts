@@ -6,6 +6,9 @@ import {
   getFinancialOverview,
   getManagedRunwayLooks,
   addOrUpdateRunwayLook,
+  getRunwayDisplayMode,
+  setRunwayDisplayMode,
+  configureLookWithGarments,
 } from './products-store';
 
 test('getManagedProducts initializes and returns catalog with cost & selling prices', () => {
@@ -59,5 +62,53 @@ test('getManagedRunwayLooks supports adding and configuring up to 12 looks', () 
 
   const updatedLooks = getManagedRunwayLooks();
   assert.strictEqual(updatedLooks.some((l) => l.id === 7), true);
+});
+
+test('getRunwayDisplayMode and setRunwayDisplayMode enforce format settings', () => {
+  setRunwayDisplayMode(1);
+  assert.strictEqual(getRunwayDisplayMode(), 1);
+
+  setRunwayDisplayMode(2);
+  assert.strictEqual(getRunwayDisplayMode(), 2);
+
+  setRunwayDisplayMode(3);
+  assert.strictEqual(getRunwayDisplayMode(), 3);
+});
+
+test('configureLookWithGarments supports Single Hero Mode with JSON specs and optional sizes', () => {
+  configureLookWithGarments({
+    lookId: 8,
+    lookNum: '08',
+    name: 'MacBook Pro M3 Max Studio Spec',
+    description: 'Flagship workstation in Space Black.',
+    modelImage: '/assets/macbook-hero.webp',
+    mode: 1,
+    top: {
+      name: 'MacBook Pro 16-inch M3 Max',
+      category: 'Tech Hardware',
+      costPriceGhs: 24000,
+      sellingPriceGhs: 36000,
+      sizes: [],
+      hasSizes: false,
+      specs: {
+        Processor: 'Apple M3 Max 16-core',
+        Memory: '36GB Unified',
+        Storage: '1TB SSD',
+      },
+    },
+  });
+
+  const looks = getManagedRunwayLooks();
+  const look8 = looks.find((l) => l.id === 8);
+  assert.ok(look8);
+  assert.strictEqual(look8?.mode, 1);
+  assert.strictEqual(look8?.bottomProductId, '');
+  assert.strictEqual(look8?.shoesProductId, '');
+
+  const prods = getManagedProducts();
+  const item = prods.find((p) => p.id === 'fit-8-shirt');
+  assert.ok(item);
+  assert.strictEqual(item?.hasSizes, false);
+  assert.strictEqual(item?.specs?.Processor, 'Apple M3 Max 16-core');
 });
 

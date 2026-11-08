@@ -17,9 +17,16 @@ import {
   configureLookWithGarments,
   getFinancialOverview,
   updateManagedProduct,
+  getRunwayDisplayMode,
+  setRunwayDisplayMode,
+  RunwayDisplayMode,
   ManagedRunwayLook,
   ManagedProduct,
 } from '../products-store';
+import {
+  compressImageToWebp,
+  formatBytes,
+} from '../utils/image-compression';
 
 /* ─── Brutalist SVG Vector Icons (No Emojis) ───────────────────────────── */
 const ic = {
@@ -307,70 +314,126 @@ function renderProductsSection(): string {
   const products = getManagedProducts();
   const looks = getManagedRunwayLooks();
   const bundleDiscount = getBundleDiscountPercent();
+  const storeMode = getRunwayDisplayMode();
 
-  // Map each look with its 3 linked items
+  // Map each look with its linked items according to active mode
   const lookCardsHtml = Array.from({ length: 12 }, (_, i) => {
     const lookId = i + 1;
     const lookNum = String(lookId).padStart(2, '0');
     const look = looks.find((l) => l.id === lookId);
+    const lookMode = (look?.mode || storeMode) as RunwayDisplayMode;
 
     if (look) {
-      // Find the 3 linked garments from products
       const topProd = products.find((p) => p.id === look.topProductId);
-      const btmProd = products.find((p) => p.id === look.bottomProductId);
-      const shoeProd = products.find((p) => p.id === look.shoesProductId);
+      const btmProd = lookMode >= 2 ? products.find((p) => p.id === look.bottomProductId) : undefined;
+      const shoeProd = lookMode === 3 ? products.find((p) => p.id === look.shoesProductId) : undefined;
 
       const topPrice = topProd ? topProd.sellingPriceGhs : 0;
       const btmPrice = btmProd ? btmProd.sellingPriceGhs : 0;
       const shoePrice = shoeProd ? shoeProd.sellingPriceGhs : 0;
-      const regularSum = topPrice + btmPrice + shoePrice;
-      const savings = Math.round(regularSum * (bundleDiscount / 100));
-      const bundlePrice = Math.max(0, regularSum - savings);
+
+      let modeBadge = '3-PIECE OUTFIT';
+      let modeCount = '3/3';
+      let linkedItemsHtml = `
+        ${renderLinkedItemRow(1, 'TOP', topProd)}
+        ${renderLinkedItemRow(2, 'BOTTOM', btmProd)}
+        ${renderLinkedItemRow(3, 'SHOES', shoeProd)}
+      `;
+      let priceFootHtml = '';
+
+      if (lookMode === 1) {
+        modeBadge = '1-PIECE HERO';
+        modeCount = `${topProd ? 1 : 0}/1`;
+        linkedItemsHtml = renderLinkedItemRow(1, 'HERO PRODUCT', topProd);
+        const margin = topPrice > 0 ? Math.round(((topPrice - (topProd?.costPriceGhs || 0)) / topPrice) * 100) : 0;
+        priceFootHtml = `
+          <div class="ap-outfit-price-foot">
+            <div class="ap-foot-sum">
+              <span class="ap-math-label">RETAIL PRICE</span>
+              <strong class="ap-math-final-val">${formatGhs(topPrice)}</strong>
+            </div>
+            <div class="ap-foot-final">
+              <span class="ap-math-label">EST. MARGIN</span>
+              <span class="ap-badge ap-badge--profit">${margin}% (${formatGhs(topPrice - (topProd?.costPriceGhs || 0))})</span>
+            </div>
+          </div>
+        `;
+      } else if (lookMode === 2) {
+        modeBadge = '2-PIECE SET';
+        modeCount = `${[topProd, btmProd].filter(Boolean).length}/2`;
+        linkedItemsHtml = `
+          ${renderLinkedItemRow(1, 'PIECE 1', topProd)}
+          ${renderLinkedItemRow(2, 'PIECE 2', btmProd)}
+        `;
+        const sum2 = topPrice + btmPrice;
+        const sav2 = Math.round(sum2 * (bundleDiscount / 100));
+        const bundle2 = Math.max(0, sum2 - sav2);
+        priceFootHtml = `
+          <div class="ap-outfit-price-foot">
+            <div class="ap-foot-sum">
+              <span class="ap-math-label">2 PIECES</span>
+              <div class="ap-foot-sum-nums">
+                <s>${formatGhs(sum2)}</s>
+                <span class="ap-bundle-discount-pill">−${bundleDiscount}% · SAVE ${formatGhs(sav2)}</span>
+              </div>
+            </div>
+            <div class="ap-foot-final">
+              <span class="ap-math-label">DUO BUNDLE</span>
+              <strong class="ap-math-final-val">${formatGhs(bundle2)}</strong>
+            </div>
+          </div>
+        `;
+      } else {
+        const regularSum = topPrice + btmPrice + shoePrice;
+        const savings = Math.round(regularSum * (bundleDiscount / 100));
+        const bundlePrice = Math.max(0, regularSum - savings);
+        priceFootHtml = `
+          <div class="ap-outfit-price-foot">
+            <div class="ap-foot-sum">
+              <span class="ap-math-label">3 PIECES</span>
+              <div class="ap-foot-sum-nums">
+                <s>${formatGhs(regularSum)}</s>
+                <span class="ap-bundle-discount-pill">−${bundleDiscount}% · SAVE ${formatGhs(savings)}</span>
+              </div>
+            </div>
+            <div class="ap-foot-final">
+              <span class="ap-math-label">BUNDLE</span>
+              <strong class="ap-math-final-val">${formatGhs(bundlePrice)}</strong>
+            </div>
+          </div>
+        `;
+      }
 
       return `
         <div class="ap-card ap-outfit-card" data-look-card-id="${lookId}">
           <div class="ap-outfit-head">
             <span class="ap-kicker">LOOK ${lookNum}</span>
-            <span class="ap-badge ap-badge--active">ON RUNWAY</span>
+            <span class="ap-badge ap-badge--active">${modeBadge}</span>
           </div>
 
-          <div class="ap-outfit-media">
+          <div class="ap-outfit-media ${lookMode === 1 ? 'ap-outfit-media--hero-single' : ''}">
             <img src="${look.modelImage || '/assets/fit-1-model.webp'}" alt="${look.name}" class="ap-outfit-model-img" />
             <div class="ap-outfit-badge-overlay">${look.name}</div>
           </div>
 
           <div class="ap-outfit-body">
             <div class="ap-outfit-title">${look.name}</div>
-            <div class="ap-outfit-desc">${look.description || 'Curated 3-piece designer outfit on the 3D stage.'}</div>
+            <div class="ap-outfit-desc">${look.description || 'Configured look on the 3D stage.'}</div>
 
-            <!-- The 3 Linked Outfit Items (exact runway pieces) -->
+            <!-- Linked Items for Active Mode -->
             <div class="ap-linked-items-box">
               <div class="ap-linked-box-head">
-                <span>${ic.link} EXACTLY 3 PIECES LINKED TO RUNWAY</span>
-                <span class="ap-linked-count">${[topProd, btmProd, shoeProd].filter(Boolean).length}/3</span>
+                <span>${ic.link} ${modeBadge} LINKED</span>
+                <span class="ap-linked-count">${modeCount}</span>
               </div>
-              ${renderLinkedItemRow(1, 'TOP', topProd)}
-              ${renderLinkedItemRow(2, 'BOTTOM', btmProd)}
-              ${renderLinkedItemRow(3, 'SHOES', shoeProd)}
+              ${linkedItemsHtml}
             </div>
 
-            <!-- Compact bundle price footer: sum → −% → bundle -->
-            <div class="ap-outfit-price-foot">
-              <div class="ap-foot-sum">
-                <span class="ap-math-label">3 PIECES</span>
-                <div class="ap-foot-sum-nums">
-                  <s>${formatGhs(regularSum)}</s>
-                  <span class="ap-bundle-discount-pill">−${bundleDiscount}% · SAVE ${formatGhs(savings)}</span>
-                </div>
-              </div>
-              <div class="ap-foot-final">
-                <span class="ap-math-label">BUNDLE</span>
-                <strong class="ap-math-final-val">${formatGhs(bundlePrice)}</strong>
-              </div>
-            </div>
+            <!-- Compact bundle / solo price footer -->
+            ${priceFootHtml}
 
             <button class="brand-btn brand-btn--dark brand-btn--sm ap-edit-outfit-btn" data-configure-slot="${lookId}">
-              ${ic.edit} CONFIGURE OUTFIT & 3 ITEMS
+              ${ic.edit} CONFIGURE LOOK (${lookMode} ITEM${lookMode > 1 ? 'S' : ''})
             </button>
           </div>
         </div>
@@ -386,8 +449,8 @@ function renderProductsSection(): string {
         </div>
         <div class="ap-empty-slot-content">
           <div class="ap-empty-slot-icon">${ic.plus}</div>
-          <div class="ap-empty-slot-title">Unconfigured Outfit</div>
-          <p class="ap-empty-slot-desc">Upload a runway model photo and link 3 matching garments (Top + Bottom + Footwear).</p>
+          <div class="ap-empty-slot-title">Unconfigured Look Slot</div>
+          <p class="ap-empty-slot-desc">Configure a stage model or cutout and link matching products according to your active runway format.</p>
           <button class="brand-btn brand-btn--sm ap-edit-outfit-btn" data-configure-slot="${lookId}">
             ${ic.plus} CONFIGURE LOOK ${lookNum}
           </button>
@@ -415,7 +478,7 @@ function renderProductsSection(): string {
         <td>${formatGhs(p.costPriceGhs)}</td>
         <td><strong>${formatGhs(p.sellingPriceGhs)}</strong></td>
         <td><span class="ap-margin-tag">${margin}% Margin</span></td>
-        <td>${p.sizes.join(', ')}</td>
+        <td>${p.hasSizes === false ? '<em>One-size / Tech (No sizes)</em>' : p.sizes.join(', ')}</td>
         <td>
           <button class="brand-btn brand-btn--sm" data-edit-prod="${p.id}">${ic.edit} EDIT PRODUCT</button>
         </td>
@@ -436,6 +499,37 @@ function renderProductsSection(): string {
         </button>
       </div>
 
+      <!-- Runway Presentation Format Switcher -->
+      <div class="ap-card ap-format-banner">
+        <div class="ap-format-banner-head">
+          <div>
+            <span class="ap-kicker">RUNWAY ARCHITECTURE & FLOW ENFORCEMENT</span>
+            <h3 class="ap-format-banner-title">Store Runway Presentation Format</h3>
+          </div>
+          <span class="ap-badge ap-badge--active">ENFORCED CONSISTENCY</span>
+        </div>
+        <p class="ap-format-banner-desc">
+          To preserve visual continuity, the entire runway operates under one coherent display format. Choose whether your storefront showcases standalone hero pieces (tech, timepieces, bags), 2-piece sets, or complete 3-piece outfits.
+        </p>
+        <div class="ap-format-selector-grid">
+          <button type="button" class="ap-format-card ${storeMode === 1 ? 'is-active' : ''}" data-set-runway-mode="1">
+            <div class="ap-format-card-badge">1 ITEM · SINGLE HERO</div>
+            <strong class="ap-format-card-title">SOLO SHOWCASE</strong>
+            <p class="ap-format-card-sub">Pin dots (1,2,3) suppressed. Cutout floats on stage pedestal. Direct 1-tap view. Ideal for Tech (MacBook Pro), Bags, Watches, Solo Grails.</p>
+          </button>
+          <button type="button" class="ap-format-card ${storeMode === 2 ? 'is-active' : ''}" data-set-runway-mode="2">
+            <div class="ap-format-card-badge">2 ITEMS · DUO COMBO</div>
+            <strong class="ap-format-card-title">MATCHING SET</strong>
+            <p class="ap-format-card-sub">Pins 1 & 2 active. 2-piece package discount. Ideal for matching sets, sunglasses + handbag pairs, tracksuit combos.</p>
+          </button>
+          <button type="button" class="ap-format-card ${storeMode === 3 ? 'is-active' : ''}" data-set-runway-mode="3">
+            <div class="ap-format-card-badge">3 ITEMS · FULL OUTFIT</div>
+            <strong class="ap-format-card-title">EDITORIAL LOOK</strong>
+            <p class="ap-format-card-sub">Pins 1, 2, 3 active. Complete head-to-toe styling (Top + Bottom + Footwear). 3-piece package bundle discount engine.</p>
+          </button>
+        </div>
+      </div>
+
       <!-- Subtabs: 3D Runway Looks vs All Garments -->
       <div class="ap-subtabs">
         <button class="ap-subtab is-active" data-subtab="runway-looks">
@@ -446,11 +540,8 @@ function renderProductsSection(): string {
         </button>
       </div>
 
-      <!-- Tab 1: Runway 3-Piece Outfits -->
+      <!-- Tab 1: Runway Looks -->
       <div id="ap-pane-runway-looks" class="ap-subtab-pane">
-        <div class="ap-info-callout">
-          <strong>3-PIECE RUNWAY OUTFIT ARCHITECTURE:</strong> Each runway look displays a model photo on the 3D stage and links exactly 3 garments (Top, Bottom, and Footwear). When customers add all 3 pieces, the active <strong>${bundleDiscount}% bundle discount</strong> is automatically calculated at checkout.
-        </div>
         <div class="ap-outfits-grid">
           ${lookCardsHtml}
         </div>
@@ -471,8 +562,8 @@ function renderProductsSection(): string {
                   <th>CATEGORY</th>
                   <th>COST PRICE (COGS)</th>
                   <th>SELLING PRICE</th>
-                  <th>UNIT MARGIN</th>
-                  <th>AVAILABLE SIZES</th>
+                  <th>EST. MARGIN</th>
+                  <th>SIZES</th>
                   <th>ACTION</th>
                 </tr>
               </thead>
@@ -480,24 +571,6 @@ function renderProductsSection(): string {
                 ${allGarmentsRowsHtml}
               </tbody>
             </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Brutalist Slide-Up Modal: Configure Look & 3 Items -->
-      <div id="ap-look-config-modal" class="ap-slide-modal-wrap" aria-hidden="true">
-        <div class="ap-slide-backdrop" id="ap-look-backdrop"></div>
-        <div class="ap-slide-card" role="dialog" aria-modal="true">
-          <div class="ap-slide-head">
-            <div>
-              <span class="ap-kicker" id="ap-modal-slot-kicker">RUNWAY CONFIGURATOR</span>
-              <h2 id="ap-modal-title">Configure Outfit & 3 Items</h2>
-            </div>
-            <button class="ap-close-btn" id="ap-modal-close-btn" aria-label="Close">${ic.close}</button>
-          </div>
-
-          <div class="ap-slide-scroll" id="ap-modal-body">
-            <!-- Dynamic form injected by openLookModal() -->
           </div>
         </div>
       </div>
@@ -696,6 +769,184 @@ function renderSettingsSection(): string {
   `;
 }
 
+/* ─── WEBP COMPRESSION DROPZONE & DYNAMIC SPECS EDITOR HELPERS ─────────── */
+
+function renderWebpDropzoneHtml(options: {
+  dropzoneId: string;
+  fileInputId: string;
+  statPillId: string;
+  hiddenInputName: string;
+  hiddenInputId: string;
+  previewImgId: string;
+  urlFallbackInputId: string;
+  initialValue: string;
+  label: string;
+  hint: string;
+}): string {
+  const isDataUrl = options.initialValue.startsWith('data:');
+  const fallbackDisplayVal = isDataUrl ? 'Compressed WebP Image (Stored)' : options.initialValue;
+
+  return `
+    <div class="ap-webp-uploader">
+      <label class="ap-label">${options.label}</label>
+      <div class="ap-dropzone" id="${options.dropzoneId}">
+        <input type="file" id="${options.fileInputId}" accept="image/*" class="ap-file-input" />
+        <div class="ap-dropzone-content">
+          <div class="ap-dropzone-icon">${ic.plus}</div>
+          <div class="ap-dropzone-text"><strong>Click to upload</strong> or drag & drop photo here</div>
+          <div class="ap-dropzone-hint">${options.hint} · Auto-compressed to WebP (Alpha Preserved)</div>
+        </div>
+      </div>
+      <div class="ap-webp-stat-pill" id="${options.statPillId}" style="display: none;"></div>
+      <input type="hidden" name="${options.hiddenInputName}" id="${options.hiddenInputId}" value="${options.initialValue}" />
+      <div class="ap-model-preview-box">
+        <img id="${options.previewImgId}" src="${options.initialValue || '/assets/fit-1-model.webp'}" alt="Live Preview" />
+        <div class="ap-model-preview-hint">Live 3D Stage / Storefront Preview (Optimized WebP)</div>
+      </div>
+      <div class="ap-url-fallback-row">
+        <span class="ap-url-fallback-label">Or paste image URL:</span>
+        <input type="url" id="${options.urlFallbackInputId}" class="ap-input ap-input--sm" placeholder="https://..." value="${fallbackDisplayVal}" />
+      </div>
+    </div>
+  `;
+}
+
+function renderSpecsEditor(specs: Record<string, string> = {}): string {
+  const entries = Object.entries(specs);
+  const rows = (entries.length > 0 ? entries : [['Processor', 'Apple M3 Pro'], ['Memory', '18GB Unified'], ['Storage', '512GB SSD']])
+    .map(([k, v], idx) => `
+      <div class="ap-spec-row" data-spec-idx="${idx}">
+        <input type="text" class="ap-input ap-spec-key" placeholder="Key (e.g. Fabric, RAM)" value="${k}" />
+        <input type="text" class="ap-input ap-spec-val" placeholder="Value (e.g. 100% Cotton, 18GB)" value="${v}" />
+        <button type="button" class="brand-btn brand-btn--sm ap-spec-del-btn" title="Remove spec">${ic.close}</button>
+      </div>
+    `)
+    .join('');
+
+  return `
+    <div class="ap-specs-editor" id="ap-specs-editor-box">
+      <div class="ap-specs-toolbar">
+        <span class="ap-specs-label">QUICK SPEC PRESETS:</span>
+        <div class="ap-preset-pills">
+          <button type="button" class="ap-preset-btn" data-spec-preset="tech">+ TECH / GADGET</button>
+          <button type="button" class="ap-preset-btn" data-spec-preset="streetwear">+ STREETWEAR / COTTON</button>
+          <button type="button" class="ap-preset-btn" data-spec-preset="accessories">+ HOROLOGY / JEWELRY</button>
+        </div>
+      </div>
+      <div class="ap-specs-rows" id="ap-specs-rows-container">
+        ${rows}
+      </div>
+      <button type="button" id="ap-add-spec-row-btn" class="brand-btn brand-btn--sm">
+        ${ic.plus} ADD SPECIFICATION ROW
+      </button>
+      <input type="hidden" name="top_specs_json" id="ap-specs-json-hidden" value='${JSON.stringify(specs)}' />
+    </div>
+  `;
+}
+
+function wireWebpDropzone(
+  container: HTMLElement,
+  options: {
+    dropzoneId: string;
+    fileInputId: string;
+    statPillId: string;
+    hiddenInputId: string;
+    previewImgId: string;
+    urlFallbackInputId?: string;
+    maxWidth?: number;
+    maxHeight?: number;
+    quality?: number;
+  }
+) {
+  const dropzone = container.querySelector(options.dropzoneId) as HTMLElement | null;
+  const fileInput = container.querySelector(options.fileInputId) as HTMLInputElement | null;
+  const statPill = container.querySelector(options.statPillId) as HTMLElement | null;
+  const hiddenInput = container.querySelector(options.hiddenInputId) as HTMLInputElement | null;
+  const previewImg = container.querySelector(options.previewImgId) as HTMLImageElement | null;
+  const urlFallback = options.urlFallbackInputId ? (container.querySelector(options.urlFallbackInputId) as HTMLInputElement | null) : null;
+
+  if (!dropzone || !fileInput) return;
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, WebP, etc.)');
+      return;
+    }
+
+    dropzone.classList.add('is-compressing');
+    if (statPill) {
+      statPill.style.display = 'block';
+      statPill.innerHTML = `<span class="ap-webp-stat-loading">⚡ Compressing to WebP with Alpha Channel...</span>`;
+    }
+
+    try {
+      const result = await compressImageToWebp(file, {
+        maxWidth: options.maxWidth || 1600,
+        maxHeight: options.maxHeight || 2400,
+        quality: options.quality || 0.85,
+      });
+
+      if (hiddenInput) hiddenInput.value = result.dataUrl;
+      if (previewImg) previewImg.src = result.dataUrl;
+      if (urlFallback) urlFallback.value = result.dataUrl.slice(0, 48) + '... (Compressed WebP)';
+
+      if (statPill) {
+        statPill.style.display = 'flex';
+        statPill.innerHTML = `
+          <div class="ap-webp-stat-badge">✓ WEBP COMPRESSED</div>
+          <div class="ap-webp-stat-text">
+            <span>Original: <strong>${formatBytes(result.originalSize)}</strong></span>
+            <span class="ap-webp-arrow">→</span>
+            <span>WebP: <strong>${formatBytes(result.compressedSize)}</strong></span>
+            <span class="ap-webp-saved">(${result.savedPercent}% SMALLER)</span>
+          </div>
+          <div class="ap-webp-stat-note">Alpha Transparency Preserved · Sub-350ms mobile load</div>
+        `;
+      }
+    } catch (err) {
+      console.error('Compression failed', err);
+      if (statPill) {
+        statPill.innerHTML = `<span class="ap-webp-stat-err">Compression failed, using original file.</span>`;
+      }
+    } finally {
+      dropzone.classList.remove('is-compressing');
+    }
+  };
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) {
+      handleFile(fileInput.files[0]);
+    }
+  });
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('ap-dropzone--dragover');
+  });
+
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('ap-dropzone--dragover');
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('ap-dropzone--dragover');
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  if (urlFallback && hiddenInput && previewImg) {
+    urlFallback.addEventListener('input', () => {
+      const val = urlFallback.value.trim();
+      if (val) {
+        hiddenInput.value = val;
+        previewImg.src = val;
+      }
+    });
+  }
+}
+
 /* ─── FORM BUILDER: CONFIGURE LOOK & LINK 3 GARMENTS ────────────────────── */
 function renderLookConfigForm(slotId: number): string {
   const looks = getManagedRunwayLooks();
@@ -703,13 +954,13 @@ function renderLookConfigForm(slotId: number): string {
   const look = looks.find((l) => l.id === slotId);
   const lookNum = String(slotId).padStart(2, '0');
   const bundleDiscount = getBundleDiscountPercent();
+  const storeMode = getRunwayDisplayMode();
+  const activeMode = (look?.mode || storeMode) as RunwayDisplayMode;
 
-  // Find linked products
   const topProd = products.find((p) => p.id === look?.topProductId);
   const btmProd = products.find((p) => p.id === look?.bottomProductId);
   const shoeProd = products.find((p) => p.id === look?.shoesProductId);
 
-  // Group products for quick selection
   const topOptions = products
     .filter((p) => p.category.toLowerCase().includes('top') || p.category.toLowerCase().includes('shirt') || p.category.toLowerCase().includes('outer') || p.id.includes('shirt'))
     .map((p) => `<option value="${p.id}" ${topProd?.id === p.id ? 'selected' : ''}>${p.name} (GH₵ ${p.sellingPriceGhs})</option>`)
@@ -739,15 +990,46 @@ function renderLookConfigForm(slotId: number): string {
       )
       .join('');
 
+  const stageImg = look?.modelImage || `/assets/fit-${Math.min(6, slotId)}-model.webp`;
+  const topImg = topProd?.image || `/assets/fit-${Math.min(6, slotId)}-shirt.webp`;
+  const btmImg = btmProd?.image || `/assets/fit-${Math.min(6, slotId)}-pants.webp`;
+  const shoeImg = shoeProd?.image || `/assets/fit-${Math.min(6, slotId)}-shoes.webp`;
+  const topHasSizes = topProd?.hasSizes !== false;
+
   return `
     <form id="ap-outfit-form" data-slot-id="${slotId}" class="ap-form">
-      <!-- Look Overview Header -->
+      <!-- 1. Look Mode Selector -->
       <div class="ap-form-section">
-        <div class="ap-form-section-title">1. RUNWAY STAGE LOOK IDENTITY</div>
+        <div class="ap-form-section-title">1. RUNWAY PRESENTATION FORMAT</div>
+        <div class="ap-mode-choice-grid">
+          <label class="ap-mode-choice-card ${activeMode === 1 ? 'is-active' : ''}">
+            <input type="radio" name="look_mode" value="1" ${activeMode === 1 ? 'checked' : ''} class="ap-mode-choice-radio" />
+            <div class="ap-mode-choice-badge">1 ITEM · SINGLE HERO</div>
+            <strong class="ap-mode-choice-name">SOLO SHOWCASE</strong>
+            <p class="ap-mode-choice-desc">Pin dots (1,2,3) suppressed. Cutout floats on pedestal. Tech, bags, watches, solitary showpiece.</p>
+          </label>
+          <label class="ap-mode-choice-card ${activeMode === 2 ? 'is-active' : ''}">
+            <input type="radio" name="look_mode" value="2" ${activeMode === 2 ? 'checked' : ''} class="ap-mode-choice-radio" />
+            <div class="ap-mode-choice-badge">2 ITEMS · DUO COMBO</div>
+            <strong class="ap-mode-choice-name">MATCHING PAIR</strong>
+            <p class="ap-mode-choice-desc">Pins 1 & 2 active. 2-piece package discount. Ideal for matching sets or accessories pairs.</p>
+          </label>
+          <label class="ap-mode-choice-card ${activeMode === 3 ? 'is-active' : ''}">
+            <input type="radio" name="look_mode" value="3" ${activeMode === 3 ? 'checked' : ''} class="ap-mode-choice-radio" />
+            <div class="ap-mode-choice-badge">3 ITEMS · FULL OUTFIT</div>
+            <strong class="ap-mode-choice-name">HEAD-TO-TOE LOOK</strong>
+            <p class="ap-mode-choice-desc">Pins 1, 2, 3 active. Complete 3-piece look (top, bottom, footwear) with bundle discount.</p>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. Look Identity & Stage Photo -->
+      <div class="ap-form-section">
+        <div class="ap-form-section-title">2. RUNWAY STAGE LOOK IDENTITY & STAGE ART</div>
         <div class="ap-field-grid-2">
           <div class="ap-field-row">
             <label class="ap-label">LOOK TITLE / NARRATIVE NAME</label>
-            <input type="text" name="name" class="ap-input" value="${look?.name || `Runway Outfit ${lookNum}`}" required />
+            <input type="text" name="name" class="ap-input" value="${look?.name || `Runway Look ${lookNum}`}" required />
           </div>
           <div class="ap-field-row">
             <label class="ap-label">LOOK NUMBER</label>
@@ -760,29 +1042,35 @@ function renderLookConfigForm(slotId: number): string {
           <input type="text" name="description" class="ap-input" value="${look?.description || 'Crafted heavyweight streetwear outfit from Accra digital runway.'}" />
         </div>
 
-        <div class="ap-field-row">
-          <label class="ap-label">MODEL RUNWAY PHOTO URL (WEBP / JPG / PNG)</label>
-          <input type="url" name="modelImage" id="ap-form-model-url" class="ap-input" value="${look?.modelImage || `/assets/fit-${Math.min(6, slotId)}-model.webp`}" required />
-          <div class="ap-model-preview-box">
-            <img id="ap-live-model-preview" src="${look?.modelImage || `/assets/fit-${Math.min(6, slotId)}-model.webp`}" alt="Runway Model Preview" />
-            <div class="ap-model-preview-hint">3D Stage Model Photo Preview</div>
-          </div>
-        </div>
+        ${renderWebpDropzoneHtml({
+          dropzoneId: 'ap-stage-dropzone',
+          fileInputId: 'ap-stage-file-input',
+          statPillId: 'ap-stage-webp-stat',
+          hiddenInputName: 'modelImage',
+          hiddenInputId: 'ap-form-model-url',
+          previewImgId: 'ap-live-model-preview',
+          urlFallbackInputId: 'ap-stage-url-fallback',
+          initialValue: stageImg,
+          label: '3D STAGE HERO / MODEL PHOTO (AUTOMATIC WEBP COMPRESSION)',
+          hint: 'PNG (transparent cutout) or JPG · WebP compressed with Alpha Transparency preserved',
+        })}
       </div>
 
-      <!-- Garment 1: TOP -->
-      <div class="ap-form-section ap-garment-config-box">
-        <div class="ap-form-section-title">2. LINK ITEM 1 — TOP GARMENT</div>
+      <!-- 3. Garment 1: TOP / HERO PRODUCT -->
+      <div class="ap-form-section ap-garment-config-box" id="ap-box-garment-1">
+        <div class="ap-form-section-title" id="ap-title-garment-1">
+          ${activeMode === 1 ? '3. LINK HERO PRODUCT (STANDALONE)' : activeMode === 2 ? '3. LINK ITEM 1 — FIRST PIECE' : '3. LINK ITEM 1 — TOP GARMENT'}
+        </div>
         <div class="ap-field-row">
-          <label class="ap-label">SELECT EXISTING TOP OR CUSTOMIZE</label>
+          <label class="ap-label">SELECT EXISTING PRODUCT OR CUSTOMIZE</label>
           <select id="ap-select-top" class="ap-select">
-            <option value="custom">-- Custom Top Garment --</option>
+            <option value="custom">-- Custom Product --</option>
             ${topOptions}
           </select>
         </div>
         <div class="ap-field-grid-2">
           <div class="ap-field-row">
-            <label class="ap-label">TOP NAME</label>
+            <label class="ap-label">PRODUCT NAME</label>
             <input type="text" name="top_name" id="ap-top-name" class="ap-input" value="${topProd?.name || 'Charcoal Heavyweight Crew'}" required />
           </div>
           <div class="ap-field-row">
@@ -800,15 +1088,52 @@ function renderLookConfigForm(slotId: number): string {
             <input type="number" name="top_sell" id="ap-top-sell" class="ap-input ap-calc-input" min="0" step="1" value="${topProd?.sellingPriceGhs || 490}" required />
           </div>
         </div>
+
+        <!-- Sizing Options Toggle -->
         <div class="ap-field-row">
+          <label class="ap-label">CUSTOMER SIZING OPTIONS</label>
+          <div class="ap-toggle-group">
+            <label class="ap-toggle-btn ${topHasSizes ? 'is-active' : ''}">
+              <input type="radio" name="top_has_sizes" value="true" ${topHasSizes ? 'checked' : ''} />
+              HAS SIZES (CLOTHING, SHOES)
+            </label>
+            <label class="ap-toggle-btn ${!topHasSizes ? 'is-active' : ''}">
+              <input type="radio" name="top_has_sizes" value="false" ${!topHasSizes ? 'checked' : ''} />
+              ONE-SIZE / NO SIZES (TECH, BAG, WATCH, LAPTOP)
+            </label>
+          </div>
+        </div>
+
+        <div class="ap-field-row" id="ap-top-size-row" style="${topHasSizes ? '' : 'display: none;'}">
           <label class="ap-label">AVAILABLE SIZES</label>
           <div class="ap-chips-row">${sizeChips(topSizes, 'top', topProd?.sizes || ['S', 'M', 'L', 'XL'])}</div>
         </div>
+
+        <!-- Dynamic Specs JSON Editor -->
+        <div class="ap-field-row">
+          <label class="ap-label">TECHNICAL / EDITORIAL SPECIFICATIONS (JSON SPECS BLOB)</label>
+          ${renderSpecsEditor(topProd?.specs || {})}
+        </div>
+
+        ${renderWebpDropzoneHtml({
+          dropzoneId: 'ap-top-dropzone',
+          fileInputId: 'ap-top-file-input',
+          statPillId: 'ap-top-webp-stat',
+          hiddenInputName: 'top_image',
+          hiddenInputId: 'ap-top-img-url',
+          previewImgId: 'ap-top-img-preview',
+          urlFallbackInputId: 'ap-top-url-fallback',
+          initialValue: topImg,
+          label: 'ITEM 1 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
+          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+        })}
       </div>
 
-      <!-- Garment 2: BOTTOM -->
-      <div class="ap-form-section ap-garment-config-box">
-        <div class="ap-form-section-title">3. LINK ITEM 2 — BOTTOM GARMENT</div>
+      <!-- 4. Garment 2: BOTTOM / ITEM 2 -->
+      <div class="ap-form-section ap-garment-config-box" id="ap-box-garment-2" style="${activeMode >= 2 ? '' : 'display: none;'}">
+        <div class="ap-form-section-title" id="ap-title-garment-2">
+          ${activeMode === 2 ? '4. LINK ITEM 2 — SECOND PIECE' : '4. LINK ITEM 2 — BOTTOM GARMENT'}
+        </div>
         <div class="ap-field-row">
           <label class="ap-label">SELECT EXISTING BOTTOM OR CUSTOMIZE</label>
           <select id="ap-select-bottom" class="ap-select">
@@ -818,33 +1143,45 @@ function renderLookConfigForm(slotId: number): string {
         </div>
         <div class="ap-field-grid-2">
           <div class="ap-field-row">
-            <label class="ap-label">BOTTOM NAME</label>
-            <input type="text" name="btm_name" id="ap-btm-name" class="ap-input" value="${btmProd?.name || 'Vintage Washed Relaxed Denim'}" required />
+            <label class="ap-label">PRODUCT NAME</label>
+            <input type="text" name="btm_name" id="ap-btm-name" class="ap-input" value="${btmProd?.name || 'Vintage Washed Relaxed Denim'}" />
           </div>
           <div class="ap-field-row">
             <label class="ap-label">CATEGORY</label>
-            <input type="text" name="btm_cat" id="ap-btm-cat" class="ap-input" value="${btmProd?.category || 'Pants'}" required />
+            <input type="text" name="btm_cat" id="ap-btm-cat" class="ap-input" value="${btmProd?.category || 'Pants'}" />
           </div>
         </div>
         <div class="ap-field-grid-2">
           <div class="ap-field-row">
             <label class="ap-label">COST PRICE / COGS (GH₵)</label>
-            <input type="number" name="btm_cost" id="ap-btm-cost" class="ap-input ap-calc-input" min="0" step="1" value="${btmProd?.costPriceGhs || 250}" required />
+            <input type="number" name="btm_cost" id="ap-btm-cost" class="ap-input ap-calc-input" min="0" step="1" value="${btmProd?.costPriceGhs || 250}" />
           </div>
           <div class="ap-field-row">
             <label class="ap-label">SELLING PRICE (GH₵)</label>
-            <input type="number" name="btm_sell" id="ap-btm-sell" class="ap-input ap-calc-input" min="0" step="1" value="${btmProd?.sellingPriceGhs || 580}" required />
+            <input type="number" name="btm_sell" id="ap-btm-sell" class="ap-input ap-calc-input" min="0" step="1" value="${btmProd?.sellingPriceGhs || 580}" />
           </div>
         </div>
         <div class="ap-field-row">
           <label class="ap-label">WAIST SIZES</label>
           <div class="ap-chips-row">${sizeChips(btmSizes, 'bottom', btmProd?.sizes || ['30', '32', '34'])}</div>
         </div>
+        ${renderWebpDropzoneHtml({
+          dropzoneId: 'ap-btm-dropzone',
+          fileInputId: 'ap-btm-file-input',
+          statPillId: 'ap-btm-webp-stat',
+          hiddenInputName: 'btm_image',
+          hiddenInputId: 'ap-btm-img-url',
+          previewImgId: 'ap-btm-img-preview',
+          urlFallbackInputId: 'ap-btm-url-fallback',
+          initialValue: btmImg,
+          label: 'ITEM 2 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
+          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+        })}
       </div>
 
-      <!-- Garment 3: FOOTWEAR -->
-      <div class="ap-form-section ap-garment-config-box">
-        <div class="ap-form-section-title">4. LINK ITEM 3 — FOOTWEAR</div>
+      <!-- 5. Garment 3: FOOTWEAR -->
+      <div class="ap-form-section ap-garment-config-box" id="ap-box-garment-3" style="${activeMode === 3 ? '' : 'display: none;'}">
+        <div class="ap-form-section-title">5. LINK ITEM 3 — FOOTWEAR</div>
         <div class="ap-field-row">
           <label class="ap-label">SELECT EXISTING FOOTWEAR OR CUSTOMIZE</label>
           <select id="ap-select-shoes" class="ap-select">
@@ -855,50 +1192,62 @@ function renderLookConfigForm(slotId: number): string {
         <div class="ap-field-grid-2">
           <div class="ap-field-row">
             <label class="ap-label">FOOTWEAR NAME</label>
-            <input type="text" name="shoe_name" id="ap-shoe-name" class="ap-input" value="${shoeProd?.name || 'Nike Orbit Agility Low'}" required />
+            <input type="text" name="shoe_name" id="ap-shoe-name" class="ap-input" value="${shoeProd?.name || 'Nike Orbit Agility Low'}" />
           </div>
           <div class="ap-field-row">
             <label class="ap-label">CATEGORY</label>
-            <input type="text" name="shoe_cat" id="ap-shoe-cat" class="ap-input" value="${shoeProd?.category || 'Footwear'}" required />
+            <input type="text" name="shoe_cat" id="ap-shoe-cat" class="ap-input" value="${shoeProd?.category || 'Footwear'}" />
           </div>
         </div>
         <div class="ap-field-grid-2">
           <div class="ap-field-row">
             <label class="ap-label">COST PRICE / COGS (GH₵)</label>
-            <input type="number" name="shoe_cost" id="ap-shoe-cost" class="ap-input ap-calc-input" min="0" step="1" value="${shoeProd?.costPriceGhs || 380}" required />
+            <input type="number" name="shoe_cost" id="ap-shoe-cost" class="ap-input ap-calc-input" min="0" step="1" value="${shoeProd?.costPriceGhs || 380}" />
           </div>
           <div class="ap-field-row">
             <label class="ap-label">SELLING PRICE (GH₵)</label>
-            <input type="number" name="shoe_sell" id="ap-shoe-sell" class="ap-input ap-calc-input" min="0" step="1" value="${shoeProd?.sellingPriceGhs || 850}" required />
+            <input type="number" name="shoe_sell" id="ap-shoe-sell" class="ap-input ap-calc-input" min="0" step="1" value="${shoeProd?.sellingPriceGhs || 850}" />
           </div>
         </div>
         <div class="ap-field-row">
           <label class="ap-label">EU SIZES</label>
           <div class="ap-chips-row">${sizeChips(shoeSizes, 'shoe', shoeProd?.sizes || ['41', '42', '43', '44'])}</div>
         </div>
+        ${renderWebpDropzoneHtml({
+          dropzoneId: 'ap-shoe-dropzone',
+          fileInputId: 'ap-shoe-file-input',
+          statPillId: 'ap-shoe-webp-stat',
+          hiddenInputName: 'shoe_image',
+          hiddenInputId: 'ap-shoe-img-url',
+          previewImgId: 'ap-shoe-img-preview',
+          urlFallbackInputId: 'ap-shoe-url-fallback',
+          initialValue: shoeImg,
+          label: 'ITEM 3 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
+          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+        })}
       </div>
 
-      <!-- Live Bundle Math Calculation Box -->
-      <div class="ap-form-section ap-live-math-box">
-        <div class="ap-form-section-title">5. LIVE BUNDLE DISCOUNT & MAPPING SUMMARY</div>
+      <!-- 6. Live Math Box -->
+      <div class="ap-form-section ap-live-math-box" id="ap-box-live-math">
+        <div class="ap-form-section-title">6. LIVE PRICING & DISCOUNT SUMMARY</div>
         <div class="ap-math-summary-grid">
-          <div class="ap-math-box-item">
-            <span>INDIVIDUAL SUM:</span>
+          <div class="ap-math-box-item" id="ap-calc-sum-box-item">
+            <span id="ap-calc-sum-label">SUM:</span>
             <strong id="ap-calc-regular-sum">GH₵ 1,920</strong>
           </div>
-          <div class="ap-math-box-item">
+          <div class="ap-math-box-item" id="ap-calc-discount-box-item">
             <span>PACKAGE DISCOUNT:</span>
             <div class="ap-inline-flex">
               <input type="number" id="ap-form-discount-input" min="0" max="100" value="${bundleDiscount}" class="ap-input ap-input--inline-rate" />
               <strong>%</strong>
             </div>
           </div>
-          <div class="ap-math-box-item">
+          <div class="ap-math-box-item" id="ap-calc-savings-box-item">
             <span>SAVINGS:</span>
             <strong id="ap-calc-savings" style="color: #15803d;">−GH₵ 192</strong>
           </div>
-          <div class="ap-math-box-item ap-math-box-item--highlight">
-            <span>CUSTOMER BUNDLE TOTAL:</span>
+          <div class="ap-math-box-item ap-math-box-item--highlight" id="ap-calc-final-box-item">
+            <span id="ap-calc-final-label">CUSTOMER TOTAL:</span>
             <strong id="ap-calc-final-bundle">GH₵ 1,728</strong>
           </div>
         </div>
@@ -907,7 +1256,7 @@ function renderLookConfigForm(slotId: number): string {
       <!-- Action Footer -->
       <div class="ap-form-footer">
         <button type="submit" class="brand-btn brand-btn--dark brand-btn--full">
-          SAVE & PUSH 3-PIECE OUTFIT TO 3D RUNWAY
+          SAVE & PUSH LOOK TO 3D RUNWAY
         </button>
         <button type="button" class="brand-btn brand-btn--full" id="ap-form-cancel-btn">
           CANCEL
@@ -919,11 +1268,6 @@ function renderLookConfigForm(slotId: number): string {
 
 /* ─── FULL PRODUCT EDITOR FORM (slide-up modal) ─────────────────────────── */
 
-/**
- * Full-fidelity product editor — every managed field in one slide-up sheet:
- * image (live preview), name, vendor, category, cost/sell pricing with live
- * margin math, stock quantity, and toggleable customer-facing size chips.
- */
 function renderProductEditForm(p: ManagedProduct): string {
   const sizePool = [
     'XS', 'S', 'M', 'L', 'XL', 'XXL',
@@ -932,6 +1276,7 @@ function renderProductEditForm(p: ManagedProduct): string {
   ];
   const chips = Array.from(new Set([...p.sizes, ...sizePool]));
   const margin = p.sellingPriceGhs > 0 ? Math.round(((p.sellingPriceGhs - p.costPriceGhs) / p.sellingPriceGhs) * 100) : 0;
+  const hasSizes = p.hasSizes !== false;
 
   return `
     <form id="ap-product-edit-form" data-product-id="${p.id}" class="ap-form">
@@ -957,14 +1302,19 @@ function renderProductEditForm(p: ManagedProduct): string {
             <input type="text" value="NK-${p.id.toUpperCase()}" class="ap-input" readonly />
           </div>
         </div>
-        <div class="ap-field-row">
-          <label class="ap-label">PRODUCT IMAGE URL (WEBP / JPG / PNG)</label>
-          <input type="url" name="image" id="ap-prod-img-url" class="ap-input" value="${p.image}" required />
-          <div class="ap-model-preview-box">
-            <img id="ap-prod-img-preview" src="${p.image}" alt="${p.name} preview" />
-            <div class="ap-model-preview-hint">Live Storefront Image Preview</div>
-          </div>
-        </div>
+
+        ${renderWebpDropzoneHtml({
+          dropzoneId: 'ap-prod-dropzone',
+          fileInputId: 'ap-prod-file-input',
+          statPillId: 'ap-prod-webp-stat',
+          hiddenInputName: 'image',
+          hiddenInputId: 'ap-prod-img-url',
+          previewImgId: 'ap-prod-img-preview',
+          urlFallbackInputId: 'ap-prod-url-fallback',
+          initialValue: p.image,
+          label: 'PRODUCT IMAGE (AUTOMATIC WEBP COMPRESSION)',
+          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+        })}
       </div>
 
       <div class="ap-form-section ap-garment-config-box">
@@ -993,20 +1343,39 @@ function renderProductEditForm(p: ManagedProduct): string {
       <div class="ap-form-section ap-garment-config-box">
         <div class="ap-form-section-title">3. AVAILABLE SIZES (CUSTOMER-FACING)</div>
         <div class="ap-field-row">
+          <label class="ap-label">CUSTOMER SIZING OPTIONS</label>
+          <div class="ap-toggle-group">
+            <label class="ap-toggle-btn ${hasSizes ? 'is-active' : ''}">
+              <input type="radio" name="prod_has_sizes" value="true" ${hasSizes ? 'checked' : ''} />
+              HAS SIZES (CLOTHING, FOOTWEAR)
+            </label>
+            <label class="ap-toggle-btn ${!hasSizes ? 'is-active' : ''}">
+              <input type="radio" name="prod_has_sizes" value="false" ${!hasSizes ? 'checked' : ''} />
+              ONE-SIZE / NO SIZES (TECH, ACCESSORIES, WATCHES)
+            </label>
+          </div>
+        </div>
+
+        <div class="ap-field-row" id="ap-prod-size-section" style="${hasSizes ? '' : 'display: none;'}">
           <label class="ap-label">TAP TO TOGGLE — ACTIVE SIZES SHIP TO CUSTOMERS</label>
           <div class="ap-chips-row" id="ap-prod-size-chips">
             ${chips
-      .map(
-        (s) => `
+              .map(
+                (s) => `
               <button type="button" class="ap-chip-btn ${p.sizes.includes(s) ? 'is-active' : ''}" data-chip-group="prod" data-val="${s}">${s}</button>`
-      )
-      .join('')}
+              )
+              .join('')}
           </div>
           <div class="ap-custom-size-row">
             <input type="text" id="ap-prod-custom-size" class="ap-input" placeholder="Custom size (e.g. 29)" maxlength="6" />
             <button type="button" id="ap-prod-add-size" class="brand-btn brand-btn--dark brand-btn--sm">+ ADD SIZE</button>
           </div>
         </div>
+      </div>
+
+      <div class="ap-form-section ap-garment-config-box">
+        <div class="ap-form-section-title">4. TECHNICAL / EDITORIAL SPECIFICATIONS (JSON SPECS)</div>
+        ${renderSpecsEditor(p.specs || {})}
       </div>
 
       <div class="ap-form-footer">
@@ -1016,6 +1385,7 @@ function renderProductEditForm(p: ManagedProduct): string {
     </form>
   `;
 }
+
 
 /* ─── ROOT RENDER: FULL ADMIN DESK ──────────────────────────────────────── */
 export function renderAdminPage(): string {
@@ -1237,10 +1607,35 @@ export function bindAdminEvents(container: HTMLElement): void {
     document.body.classList.remove('ap-no-scroll');
   };
 
+  // Global Runway Format Selector buttons
+  container.querySelectorAll<HTMLButtonElement>('[data-set-runway-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = parseInt(btn.dataset.setRunwayMode || '3', 10) as RunwayDisplayMode;
+      setRunwayDisplayMode(mode);
+      const pc = document.getElementById('page-content');
+      if (pc) {
+        pc.innerHTML = renderAdminPage();
+        bindAdminEvents(pc);
+        activateNav('ap-products');
+      }
+    });
+  });
+
   const openOutfitModal = (slotId: number) => {
     if (!modalWrap || !modalBody) return;
+    const looks = getManagedRunwayLooks();
+    const look = looks.find((l) => l.id === slotId);
+    const storeMode = getRunwayDisplayMode();
+    const initialMode = (look?.mode || storeMode) as RunwayDisplayMode;
     const lookNum = String(slotId).padStart(2, '0');
-    if (modalTitle) modalTitle.textContent = `Configure Outfit & 3 Items — Look ${lookNum}`;
+
+    if (modalTitle) {
+      modalTitle.textContent = initialMode === 1
+        ? `Configure Single Hero — Look ${lookNum}`
+        : initialMode === 2
+        ? `Configure Duo Combo (2 Pieces) — Look ${lookNum}`
+        : `Configure Outfit & 3 Items — Look ${lookNum}`;
+    }
     if (modalSlotKicker) modalSlotKicker.textContent = `RUNWAY SLOT ${lookNum} OF 12`;
     modalBody.innerHTML = renderLookConfigForm(slotId);
 
@@ -1248,16 +1643,52 @@ export function bindAdminEvents(container: HTMLElement): void {
     modalWrap.setAttribute('aria-hidden', 'false');
     document.body.classList.add('ap-no-scroll');
 
-    // Live preview for model image
-    const modelUrlInput = modalBody.querySelector('#ap-form-model-url') as HTMLInputElement | null;
-    const modelPreviewImg = modalBody.querySelector('#ap-live-model-preview') as HTMLImageElement | null;
-    modelUrlInput?.addEventListener('input', () => {
-      if (modelPreviewImg && modelUrlInput.value.trim()) {
-        modelPreviewImg.src = modelUrlInput.value.trim();
-      }
+    // 1. Wire WebP Dropzones
+    wireWebpDropzone(modalBody, {
+      dropzoneId: '#ap-stage-dropzone',
+      fileInputId: '#ap-stage-file-input',
+      statPillId: '#ap-stage-webp-stat',
+      hiddenInputId: '#ap-form-model-url',
+      previewImgId: '#ap-live-model-preview',
+      urlFallbackInputId: '#ap-stage-url-fallback',
+      maxWidth: 1600,
+      quality: 0.85,
     });
 
-    // Populate garment fields when choosing existing from dropdown
+    wireWebpDropzone(modalBody, {
+      dropzoneId: '#ap-top-dropzone',
+      fileInputId: '#ap-top-file-input',
+      statPillId: '#ap-top-webp-stat',
+      hiddenInputId: '#ap-top-img-url',
+      previewImgId: '#ap-top-img-preview',
+      urlFallbackInputId: '#ap-top-url-fallback',
+      maxWidth: 900,
+      quality: 0.85,
+    });
+
+    wireWebpDropzone(modalBody, {
+      dropzoneId: '#ap-btm-dropzone',
+      fileInputId: '#ap-btm-file-input',
+      statPillId: '#ap-btm-webp-stat',
+      hiddenInputId: '#ap-btm-img-url',
+      previewImgId: '#ap-btm-img-preview',
+      urlFallbackInputId: '#ap-btm-url-fallback',
+      maxWidth: 900,
+      quality: 0.85,
+    });
+
+    wireWebpDropzone(modalBody, {
+      dropzoneId: '#ap-shoe-dropzone',
+      fileInputId: '#ap-shoe-file-input',
+      statPillId: '#ap-shoe-webp-stat',
+      hiddenInputId: '#ap-shoe-img-url',
+      previewImgId: '#ap-shoe-img-preview',
+      urlFallbackInputId: '#ap-shoe-url-fallback',
+      maxWidth: 900,
+      quality: 0.85,
+    });
+
+    // 2. Populate garment fields when choosing existing from dropdown
     const products = getManagedProducts();
     const wireGarmentDropdown = (selectId: string, nameId: string, catId: string, costId: string, sellId: string) => {
       const sel = modalBody.querySelector(selectId) as HTMLSelectElement | null;
@@ -1281,31 +1712,198 @@ export function bindAdminEvents(container: HTMLElement): void {
     wireGarmentDropdown('#ap-select-bottom', '#ap-btm-name', '#ap-btm-cat', '#ap-btm-cost', '#ap-btm-sell');
     wireGarmentDropdown('#ap-select-shoes', '#ap-shoe-name', '#ap-shoe-cat', '#ap-shoe-cost', '#ap-shoe-sell');
 
-    // Sizing chips toggle
-    modalBody.querySelectorAll<HTMLButtonElement>('.ap-chip-btn').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        chip.classList.toggle('is-active');
+    // 3. Look Mode Selector Change
+    const modeCards = modalBody.querySelectorAll<HTMLElement>('.ap-mode-choice-card');
+    const modeRadios = modalBody.querySelectorAll<HTMLInputElement>('input[name="look_mode"]');
+    const box2 = modalBody.querySelector('#ap-box-garment-2') as HTMLElement | null;
+    const box3 = modalBody.querySelector('#ap-box-garment-3') as HTMLElement | null;
+    const item1Title = modalBody.querySelector('#ap-title-garment-1') as HTMLElement | null;
+
+    const syncModalMode = (mode: number) => {
+      modeCards.forEach((c) => {
+        const r = c.querySelector('input') as HTMLInputElement | null;
+        c.classList.toggle('is-active', r?.value === String(mode));
+      });
+
+      if (mode === 1) {
+        if (item1Title) item1Title.textContent = '3. LINK HERO PRODUCT (STANDALONE)';
+        if (box2) box2.style.display = 'none';
+        if (box3) box3.style.display = 'none';
+        if (modalTitle) modalTitle.textContent = `Configure Single Hero — Look ${lookNum}`;
+      } else if (mode === 2) {
+        if (item1Title) item1Title.textContent = '3. LINK ITEM 1 — FIRST PIECE';
+        if (box2) box2.style.display = '';
+        if (box3) box3.style.display = 'none';
+        if (modalTitle) modalTitle.textContent = `Configure Duo Combo (2 Pieces) — Look ${lookNum}`;
+      } else {
+        if (item1Title) item1Title.textContent = '3. LINK ITEM 1 — TOP GARMENT';
+        if (box2) box2.style.display = '';
+        if (box3) box3.style.display = '';
+        if (modalTitle) modalTitle.textContent = `Configure Outfit & 3 Items — Look ${lookNum}`;
+      }
+      calcLiveMath();
+    };
+
+    modeRadios.forEach((r) => {
+      r.addEventListener('change', () => syncModalMode(parseInt(r.value, 10)));
+    });
+
+    // 4. Sizing options radio toggle
+    const hasSizesRadios = modalBody.querySelectorAll<HTMLInputElement>('input[name="top_has_sizes"]');
+    const topSizeRow = modalBody.querySelector('#ap-top-size-row') as HTMLElement | null;
+    hasSizesRadios.forEach((r) => {
+      r.addEventListener('change', () => {
+        const has = r.value !== 'false';
+        if (topSizeRow) topSizeRow.style.display = has ? '' : 'none';
+        modalBody.querySelectorAll<HTMLElement>('.ap-toggle-btn').forEach((btn) => {
+          const btnR = btn.querySelector('input') as HTMLInputElement | null;
+          btn.classList.toggle('is-active', Boolean(btnR?.checked));
+        });
       });
     });
 
-    // Live Math computation
+    // Sizing chips toggle
+    modalBody.querySelectorAll<HTMLButtonElement>('.ap-chip-btn').forEach((chip) => {
+      chip.addEventListener('click', () => chip.classList.toggle('is-active'));
+    });
+
+    // 5. Specs Editor
+    const updateSpecsHidden = () => {
+      const hidden = modalBody.querySelector('#ap-specs-json-hidden') as HTMLInputElement | null;
+      const rows = modalBody.querySelectorAll<HTMLElement>('.ap-spec-row');
+      const obj: Record<string, string> = {};
+      rows.forEach((row) => {
+        const k = (row.querySelector('.ap-spec-key') as HTMLInputElement | null)?.value.trim();
+        const v = (row.querySelector('.ap-spec-val') as HTMLInputElement | null)?.value.trim();
+        if (k) obj[k] = v || '';
+      });
+      if (hidden) hidden.value = JSON.stringify(obj);
+    };
+
+    const attachSpecRowEvents = (row: HTMLElement) => {
+      row.querySelectorAll('input').forEach((inp) => inp.addEventListener('input', updateSpecsHidden));
+      row.querySelector('.ap-spec-del-btn')?.addEventListener('click', () => {
+        row.remove();
+        updateSpecsHidden();
+      });
+    };
+
+    modalBody.querySelectorAll<HTMLElement>('.ap-spec-row').forEach(attachSpecRowEvents);
+
+    modalBody.querySelector('#ap-add-spec-row-btn')?.addEventListener('click', () => {
+      const container = modalBody.querySelector('#ap-specs-rows-container');
+      if (!container) return;
+      const newRow = document.createElement('div');
+      newRow.className = 'ap-spec-row';
+      newRow.innerHTML = `
+        <input type="text" class="ap-input ap-spec-key" placeholder="Key (e.g. RAM, Fabric)" value="" />
+        <input type="text" class="ap-input ap-spec-val" placeholder="Value" value="" />
+        <button type="button" class="brand-btn brand-btn--sm ap-spec-del-btn" title="Remove spec">${ic.close}</button>
+      `;
+      container.appendChild(newRow);
+      attachSpecRowEvents(newRow);
+      newRow.querySelector<HTMLInputElement>('.ap-spec-key')?.focus();
+      updateSpecsHidden();
+    });
+
+    const specPresets: Record<string, Record<string, string>> = {
+      tech: {
+        Processor: 'Apple M3 Pro (12-Core CPU)',
+        Memory: '18GB Unified Memory',
+        Storage: '512GB Ultra-Fast SSD',
+        Display: '14.2 Liquid Retina XDR',
+        Battery: 'Up to 18 Hours',
+      },
+      streetwear: {
+        Fabric: '100% Organic Heavyweight Cotton',
+        Weight: '380 GSM Pre-Shrunk Fleece',
+        Fit: 'Boxy Drop-Shoulder Relaxed Cut',
+        Origin: 'Accra Atelier',
+        Care: 'Cold Machine Wash Inside Out',
+      },
+      accessories: {
+        Material: '18K Gold Plated Brass',
+        Dimensions: '42mm x 14mm',
+        Finish: 'High Polish Mirror PVD',
+        Origin: 'Handcrafted in Accra',
+      },
+    };
+
+    modalBody.querySelectorAll<HTMLButtonElement>('[data-spec-preset]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const presetKey = btn.dataset.specPreset || 'tech';
+        const p = specPresets[presetKey] || specPresets.tech;
+        const container = modalBody.querySelector('#ap-specs-rows-container');
+        if (!container) return;
+        container.innerHTML = Object.entries(p)
+          .map(
+            ([k, v]) => `
+          <div class="ap-spec-row">
+            <input type="text" class="ap-input ap-spec-key" value="${k}" />
+            <input type="text" class="ap-input ap-spec-val" value="${v}" />
+            <button type="button" class="brand-btn brand-btn--sm ap-spec-del-btn" title="Remove spec">${ic.close}</button>
+          </div>
+        `
+          )
+          .join('');
+        container.querySelectorAll<HTMLElement>('.ap-spec-row').forEach(attachSpecRowEvents);
+        updateSpecsHidden();
+      });
+    });
+
+    // 6. Live Math Computation
     const calcLiveMath = () => {
+      const modeRadio = modalBody.querySelector('input[name="look_mode"]:checked') as HTMLInputElement | null;
+      const currentMode = parseInt(modeRadio?.value || '3', 10);
       const topSell = parseFloat((modalBody.querySelector('#ap-top-sell') as HTMLInputElement)?.value || '0') || 0;
+      const topCost = parseFloat((modalBody.querySelector('#ap-top-cost') as HTMLInputElement)?.value || '0') || 0;
       const btmSell = parseFloat((modalBody.querySelector('#ap-btm-sell') as HTMLInputElement)?.value || '0') || 0;
       const shoeSell = parseFloat((modalBody.querySelector('#ap-shoe-sell') as HTMLInputElement)?.value || '0') || 0;
       const discount = parseFloat((modalBody.querySelector('#ap-form-discount-input') as HTMLInputElement)?.value || '10') || 0;
 
-      const sum = topSell + btmSell + shoeSell;
-      const savings = Math.round(sum * (discount / 100));
-      const bundle = Math.max(0, sum - savings);
-
       const sumEl = modalBody.querySelector('#ap-calc-regular-sum');
       const savEl = modalBody.querySelector('#ap-calc-savings');
       const finEl = modalBody.querySelector('#ap-calc-final-bundle');
+      const sumLabel = modalBody.querySelector('#ap-calc-sum-label');
+      const finalLabel = modalBody.querySelector('#ap-calc-final-label');
+      const discountItem = modalBody.querySelector('#ap-calc-discount-box-item') as HTMLElement | null;
+      const savingsItem = modalBody.querySelector('#ap-calc-savings-box-item') as HTMLElement | null;
 
-      if (sumEl) sumEl.textContent = formatGhs(sum);
-      if (savEl) savEl.textContent = `−${formatGhs(savings)}`;
-      if (finEl) finEl.textContent = formatGhs(bundle);
+      if (currentMode === 1) {
+        if (sumLabel) sumLabel.textContent = 'COST PRICE (COGS):';
+        if (finalLabel) finalLabel.textContent = 'SELLING PRICE (RETAIL):';
+        if (sumEl) sumEl.textContent = formatGhs(topCost);
+        if (finEl) finEl.textContent = formatGhs(topSell);
+        if (discountItem) discountItem.style.display = 'none';
+        if (savingsItem) {
+          savingsItem.style.display = '';
+          const profit = Math.max(0, topSell - topCost);
+          const margin = topSell > 0 ? Math.round((profit / topSell) * 100) : 0;
+          savingsItem.innerHTML = `<span>EST. MARGIN:</span><strong style="color: #15803d;">+${formatGhs(profit)} (${margin}%)</strong>`;
+        }
+      } else if (currentMode === 2) {
+        if (discountItem) discountItem.style.display = '';
+        if (savingsItem) savingsItem.style.display = '';
+        if (sumLabel) sumLabel.textContent = '2 PIECES SUM:';
+        if (finalLabel) finalLabel.textContent = 'DUO PACKAGE TOTAL:';
+        const sum2 = topSell + btmSell;
+        const savings2 = Math.round(sum2 * (discount / 100));
+        const bundle2 = Math.max(0, sum2 - savings2);
+        if (sumEl) sumEl.textContent = formatGhs(sum2);
+        if (savEl) savEl.textContent = `−${formatGhs(savings2)}`;
+        if (finEl) finEl.textContent = formatGhs(bundle2);
+      } else {
+        if (discountItem) discountItem.style.display = '';
+        if (savingsItem) savingsItem.style.display = '';
+        if (sumLabel) sumLabel.textContent = '3 PIECES SUM:';
+        if (finalLabel) finalLabel.textContent = 'FULL OUTFIT TOTAL:';
+        const sum3 = topSell + btmSell + shoeSell;
+        const savings3 = Math.round(sum3 * (discount / 100));
+        const bundle3 = Math.max(0, sum3 - savings3);
+        if (sumEl) sumEl.textContent = formatGhs(sum3);
+        if (savEl) savEl.textContent = `−${formatGhs(savings3)}`;
+        if (finEl) finEl.textContent = formatGhs(bundle3);
+      }
     };
 
     modalBody.querySelectorAll('.ap-calc-input, #ap-form-discount-input').forEach((inp) => {
@@ -1321,6 +1919,24 @@ export function bindAdminEvents(container: HTMLElement): void {
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
       const formData = new FormData(form);
+      const chosenMode = parseInt(String(formData.get('look_mode') || '3'), 10) as RunwayDisplayMode;
+
+      const topName = String(formData.get('top_name') || '').trim();
+      const btmName = String(formData.get('btm_name') || '').trim();
+      const shoeName = String(formData.get('shoe_name') || '').trim();
+
+      if (!topName) {
+        alert('Item 1 is required.');
+        return;
+      }
+      if (chosenMode >= 2 && !btmName) {
+        alert('Duo Combo format requires Item 2 to be filled. You cannot leave a slot empty.');
+        return;
+      }
+      if (chosenMode === 3 && !shoeName) {
+        alert('Full Runway Outfit format requires Item 3 (Footwear) to be filled. You cannot leave a slot empty.');
+        return;
+      }
 
       const getActiveChips = (group: string) => {
         return Array.from(modalBody.querySelectorAll<HTMLButtonElement>(`.ap-chip-btn[data-chip-group="${group}"].is-active`)).map(
@@ -1331,40 +1947,53 @@ export function bindAdminEvents(container: HTMLElement): void {
       const topSizes = getActiveChips('top');
       const btmSizes = getActiveChips('bottom');
       const shoeSizes = getActiveChips('shoe');
+      const hasSizes = formData.get('top_has_sizes') !== 'false';
 
-      const name = String(formData.get('name') || `Runway Outfit ${lookNum}`);
+      let topSpecs: Record<string, string> = {};
+      try {
+        topSpecs = JSON.parse(String(formData.get('top_specs_json') || '{}'));
+      } catch {
+        topSpecs = {};
+      }
+
+      const name = String(formData.get('name') || `Runway Look ${lookNum}`);
       const description = String(formData.get('description') || '');
       const modelImage = String(formData.get('modelImage') || '');
       const bundleDisc = parseFloat(String(formData.get('bundle_discount') || '')) || parseFloat((modalBody.querySelector('#ap-form-discount-input') as HTMLInputElement)?.value || '10');
 
-      // Save via products-store
       configureLookWithGarments({
         lookId: slotId,
         lookNum,
         name,
         description,
         modelImage,
+        mode: chosenMode,
         top: {
-          name: String(formData.get('top_name') || 'Top Garment'),
+          name: topName,
           category: String(formData.get('top_cat') || 'Tops'),
-          costPriceGhs: parseFloat(String(formData.get('top_cost') || '0')) || 150,
-          sellingPriceGhs: parseFloat(String(formData.get('top_sell') || '0')) || 350,
-          sizes: topSizes.length > 0 ? topSizes : ['S', 'M', 'L'],
+          costPriceGhs: parseFloat(String(formData.get('top_cost') || '0')) || 0,
+          sellingPriceGhs: parseFloat(String(formData.get('top_sell') || '0')) || 0,
+          sizes: hasSizes ? (topSizes.length > 0 ? topSizes : ['Standard']) : [],
+          hasSizes,
+          specs: topSpecs,
+          image: String(formData.get('top_image') || modelImage),
         },
-        bottom: {
-          name: String(formData.get('btm_name') || 'Bottom Garment'),
+        bottom: chosenMode >= 2 ? {
+          name: btmName,
           category: String(formData.get('btm_cat') || 'Pants'),
-          costPriceGhs: parseFloat(String(formData.get('btm_cost') || '0')) || 180,
-          sellingPriceGhs: parseFloat(String(formData.get('btm_sell') || '0')) || 450,
+          costPriceGhs: parseFloat(String(formData.get('btm_cost') || '0')) || 0,
+          sellingPriceGhs: parseFloat(String(formData.get('btm_sell') || '0')) || 0,
           sizes: btmSizes.length > 0 ? btmSizes : ['30', '32', '34'],
-        },
-        shoes: {
-          name: String(formData.get('shoe_name') || 'Footwear'),
+          image: String(formData.get('btm_image') || modelImage),
+        } : undefined,
+        shoes: chosenMode === 3 ? {
+          name: shoeName,
           category: String(formData.get('shoe_cat') || 'Footwear'),
-          costPriceGhs: parseFloat(String(formData.get('shoe_cost') || '0')) || 250,
-          sellingPriceGhs: parseFloat(String(formData.get('shoe_sell') || '0')) || 650,
+          costPriceGhs: parseFloat(String(formData.get('shoe_cost') || '0')) || 0,
+          sellingPriceGhs: parseFloat(String(formData.get('shoe_sell') || '0')) || 0,
           sizes: shoeSizes.length > 0 ? shoeSizes : ['41', '42', '43'],
-        },
+          image: String(formData.get('shoe_image') || modelImage),
+        } : undefined,
       });
 
       if (!isNaN(bundleDisc) && bundleDisc >= 0) {
@@ -1373,7 +2002,6 @@ export function bindAdminEvents(container: HTMLElement): void {
 
       closeOutfitModal();
 
-      // Refresh admin view
       const pc = document.getElementById('page-content');
       if (pc) {
         pc.innerHTML = renderAdminPage();
@@ -1412,11 +2040,30 @@ export function bindAdminEvents(container: HTMLElement): void {
     modalWrap.setAttribute('aria-hidden', 'false');
     document.body.classList.add('ap-no-scroll');
 
-    // Live image preview
-    const imgUrlInput = modalBody.querySelector('#ap-prod-img-url') as HTMLInputElement | null;
-    const imgPreview = modalBody.querySelector('#ap-prod-img-preview') as HTMLImageElement | null;
-    imgUrlInput?.addEventListener('input', () => {
-      if (imgPreview && imgUrlInput.value.trim()) imgPreview.src = imgUrlInput.value.trim();
+    // 1. Wire WebP Dropzone for Product Image
+    wireWebpDropzone(modalBody, {
+      dropzoneId: '#ap-prod-dropzone',
+      fileInputId: '#ap-prod-file-input',
+      statPillId: '#ap-prod-webp-stat',
+      hiddenInputId: '#ap-prod-img-url',
+      previewImgId: '#ap-prod-img-preview',
+      urlFallbackInputId: '#ap-prod-url-fallback',
+      maxWidth: 900,
+      quality: 0.85,
+    });
+
+    // 2. Sizing Options Radio Toggle
+    const hasSizesRadios = modalBody.querySelectorAll<HTMLInputElement>('input[name="prod_has_sizes"]');
+    const sizeSection = modalBody.querySelector('#ap-prod-size-section') as HTMLElement | null;
+    hasSizesRadios.forEach((r) => {
+      r.addEventListener('change', () => {
+        const has = r.value !== 'false';
+        if (sizeSection) sizeSection.style.display = has ? '' : 'none';
+        modalBody.querySelectorAll<HTMLElement>('.ap-toggle-btn').forEach((btn) => {
+          const btnR = btn.querySelector('input') as HTMLInputElement | null;
+          btn.classList.toggle('is-active', Boolean(btnR?.checked));
+        });
+      });
     });
 
     // Size chips toggle
@@ -1448,7 +2095,91 @@ export function bindAdminEvents(container: HTMLElement): void {
       if (customInput) customInput.value = '';
     });
 
-    // Live margin math
+    // 3. Specs Editor for Product
+    const updateProdSpecsHidden = () => {
+      const hidden = modalBody.querySelector('#ap-specs-json-hidden') as HTMLInputElement | null;
+      const rows = modalBody.querySelectorAll<HTMLElement>('.ap-spec-row');
+      const obj: Record<string, string> = {};
+      rows.forEach((row) => {
+        const k = (row.querySelector('.ap-spec-key') as HTMLInputElement | null)?.value.trim();
+        const v = (row.querySelector('.ap-spec-val') as HTMLInputElement | null)?.value.trim();
+        if (k) obj[k] = v || '';
+      });
+      if (hidden) hidden.value = JSON.stringify(obj);
+    };
+
+    const attachProdSpecRowEvents = (row: HTMLElement) => {
+      row.querySelectorAll('input').forEach((inp) => inp.addEventListener('input', updateProdSpecsHidden));
+      row.querySelector('.ap-spec-del-btn')?.addEventListener('click', () => {
+        row.remove();
+        updateProdSpecsHidden();
+      });
+    };
+
+    modalBody.querySelectorAll<HTMLElement>('.ap-spec-row').forEach(attachProdSpecRowEvents);
+
+    modalBody.querySelector('#ap-add-spec-row-btn')?.addEventListener('click', () => {
+      const container = modalBody.querySelector('#ap-specs-rows-container');
+      if (!container) return;
+      const newRow = document.createElement('div');
+      newRow.className = 'ap-spec-row';
+      newRow.innerHTML = `
+        <input type="text" class="ap-input ap-spec-key" placeholder="Key (e.g. RAM, Fabric)" value="" />
+        <input type="text" class="ap-input ap-spec-val" placeholder="Value" value="" />
+        <button type="button" class="brand-btn brand-btn--sm ap-spec-del-btn" title="Remove spec">${ic.close}</button>
+      `;
+      container.appendChild(newRow);
+      attachProdSpecRowEvents(newRow);
+      newRow.querySelector<HTMLInputElement>('.ap-spec-key')?.focus();
+      updateProdSpecsHidden();
+    });
+
+    const specPresets: Record<string, Record<string, string>> = {
+      tech: {
+        Processor: 'Apple M3 Pro (12-Core CPU)',
+        Memory: '18GB Unified Memory',
+        Storage: '512GB Ultra-Fast SSD',
+        Display: '14.2 Liquid Retina XDR',
+        Battery: 'Up to 18 Hours',
+      },
+      streetwear: {
+        Fabric: '100% Organic Heavyweight Cotton',
+        Weight: '380 GSM Pre-Shrunk Fleece',
+        Fit: 'Boxy Drop-Shoulder Relaxed Cut',
+        Origin: 'Accra Atelier',
+        Care: 'Cold Machine Wash Inside Out',
+      },
+      accessories: {
+        Material: '18K Gold Plated Brass',
+        Dimensions: '42mm x 14mm',
+        Finish: 'High Polish Mirror PVD',
+        Origin: 'Handcrafted in Accra',
+      },
+    };
+
+    modalBody.querySelectorAll<HTMLButtonElement>('[data-spec-preset]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const presetKey = btn.dataset.specPreset || 'tech';
+        const p = specPresets[presetKey] || specPresets.tech;
+        const container = modalBody.querySelector('#ap-specs-rows-container');
+        if (!container) return;
+        container.innerHTML = Object.entries(p)
+          .map(
+            ([k, v]) => `
+          <div class="ap-spec-row">
+            <input type="text" class="ap-input ap-spec-key" value="${k}" />
+            <input type="text" class="ap-input ap-spec-val" value="${v}" />
+            <button type="button" class="brand-btn brand-btn--sm ap-spec-del-btn" title="Remove spec">${ic.close}</button>
+          </div>
+        `
+          )
+          .join('');
+        container.querySelectorAll<HTMLElement>('.ap-spec-row').forEach(attachProdSpecRowEvents);
+        updateProdSpecsHidden();
+      });
+    });
+
+    // 4. Live margin math
     const calcMargin = () => {
       const cost = parseFloat((modalBody.querySelector('#ap-prod-cost') as HTMLInputElement)?.value || '0') || 0;
       const sell = parseFloat((modalBody.querySelector('#ap-prod-sell') as HTMLInputElement)?.value || '0') || 0;
@@ -1473,6 +2204,14 @@ export function bindAdminEvents(container: HTMLElement): void {
       const sizes = Array.from(modalBody.querySelectorAll<HTMLButtonElement>('.ap-chip-btn.is-active')).map(
         (c) => c.dataset.val || ''
       );
+      const hasSizes = fd.get('prod_has_sizes') !== 'false';
+
+      let prodSpecs: Record<string, string> = {};
+      try {
+        prodSpecs = JSON.parse(String(fd.get('top_specs_json') || '{}'));
+      } catch {
+        prodSpecs = {};
+      }
 
       const ok = updateManagedProduct(prod.id, {
         name: String(fd.get('name') || prod.name),
@@ -1482,7 +2221,9 @@ export function bindAdminEvents(container: HTMLElement): void {
         costPriceGhs: parseFloat(String(fd.get('cost') || '0')) || 0,
         sellingPriceGhs: parseFloat(String(fd.get('sell') || '0')) || 0,
         stockQuantity: parseInt(String(fd.get('stock') || '0'), 10) || 0,
-        sizes: sizes.length > 0 ? sizes : prod.sizes,
+        sizes: hasSizes ? (sizes.length > 0 ? sizes : prod.sizes) : [],
+        hasSizes,
+        specs: prodSpecs,
       });
 
       closeOutfitModal();
@@ -1493,7 +2234,6 @@ export function bindAdminEvents(container: HTMLElement): void {
           pc.innerHTML = renderAdminPage();
           bindAdminEvents(pc);
           activateNav('ap-products');
-          // Re-open the All Garments ledger so the saved row is visible
           pc.querySelector<HTMLButtonElement>('.ap-subtab[data-subtab="all-garments"]')?.click();
         }
       }

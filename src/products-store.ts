@@ -1,6 +1,8 @@
 import { PRODUCTS, LOOKS, ProductItem, LookData } from './data';
 import { toGhs } from './currency';
 
+export type RunwayDisplayMode = 1 | 2 | 3;
+
 export interface ManagedProduct {
   id: string;
   name: string;
@@ -10,6 +12,9 @@ export interface ManagedProduct {
   stockQuantity: number;
   image: string;
   sizes: string[];
+  hasSizes?: boolean; // false for tech / one-size / no-size items
+  specs?: Record<string, string>; // JSON blob for arbitrary technical / fashion specs
+  description?: string;
   vendor: string;
   assignedLookId?: number; // Which runway look it belongs to (1 to 12)
 }
@@ -20,14 +25,47 @@ export interface ManagedRunwayLook {
   name: string;
   description: string;
   modelImage: string;
-  topProductId: string;
-  bottomProductId: string;
-  shoesProductId: string;
+  mode?: RunwayDisplayMode; // 1 (Single Hero), 2 (Duo Combo), 3 (Full Outfit)
+  topProductId: string; // Item 1 (always present)
+  bottomProductId?: string; // Item 2 (present if mode >= 2)
+  shoesProductId?: string; // Item 3 (present if mode === 3)
   activeOnRunway: boolean;
 }
 
 const PRODUCTS_STORAGE_KEY = 'runway-managed-products-v1';
 const LOOKS_STORAGE_KEY = 'runway-managed-looks-v1';
+const RUNWAY_MODE_STORAGE_KEY = 'runway-display-mode-v1';
+
+let inMemoryRunwayMode: RunwayDisplayMode = 3;
+
+export function getRunwayDisplayMode(): RunwayDisplayMode {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return inMemoryRunwayMode;
+    }
+    const val = localStorage.getItem(RUNWAY_MODE_STORAGE_KEY);
+    if (val === '1' || val === '2' || val === '3') {
+      return parseInt(val, 10) as RunwayDisplayMode;
+    }
+    return 3;
+  } catch {
+    return inMemoryRunwayMode;
+  }
+}
+
+export function setRunwayDisplayMode(mode: RunwayDisplayMode): void {
+  inMemoryRunwayMode = mode;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(RUNWAY_MODE_STORAGE_KEY, String(mode));
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('runway:mode-updated', { detail: { mode } }));
+      }
+    }
+  } catch (e) {
+    console.error('Failed to save runway display mode', e);
+  }
+}
 
 // Estimated realistic fashion production cost ratio (~40% of retail in Accra)
 function estimateCostPrice(sellingPriceGhs: number): number {
@@ -61,6 +99,7 @@ function buildInitialManagedLooks(): ManagedRunwayLook[] {
     name: look.name,
     description: look.description,
     modelImage: look.model640,
+    mode: 3 as RunwayDisplayMode,
     topProductId: look.items[0]?.productId || '',
     bottomProductId: look.items[1]?.productId || '',
     shoesProductId: look.items[2]?.productId || '',
@@ -112,12 +151,15 @@ export interface ManagedProductPatch {
   stockQuantity?: number;
   image?: string;
   sizes?: string[];
+  hasSizes?: boolean;
+  specs?: Record<string, string>;
+  description?: string;
   vendor?: string;
 }
 
 /**
  * Full product editor backing store — merges a partial patch into a managed
- * product (name, vendor, category, image, pricing, stock, sizes) and persists.
+ * product (name, vendor, category, image, pricing, stock, sizes, specs) and persists.
  */
 export function updateManagedProduct(productId: string, patch: ManagedProductPatch): boolean {
   const products = getManagedProducts();
@@ -132,6 +174,9 @@ export function updateManagedProduct(productId: string, patch: ManagedProductPat
   if (patch.sellingPriceGhs !== undefined) target.sellingPriceGhs = Math.max(0, patch.sellingPriceGhs);
   if (patch.stockQuantity !== undefined) target.stockQuantity = Math.max(0, Math.round(patch.stockQuantity));
   if (patch.sizes !== undefined) target.sizes = patch.sizes.map((s) => s.trim()).filter(Boolean);
+  if (patch.hasSizes !== undefined) target.hasSizes = patch.hasSizes;
+  if (patch.specs !== undefined) target.specs = patch.specs;
+  if (patch.description !== undefined) target.description = patch.description.trim();
 
   saveManagedProducts(products);
   return true;
@@ -201,33 +246,51 @@ export function addOrUpdateRunwayLook(look: ManagedRunwayLook): void {
   saveManagedRunwayLooks(looks);
 }
 
+export interface GarmentConfigInput {
+  name: string;
+  category: string;
+  costPriceGhs: number;
+  sellingPriceGhs: number;
+  sizes: string[];
+  hasSizes?: boolean;
+  specs?: Record<string, string>;
+  image?: string;
+}
+
 export function configureLookWithGarments(params: {
   lookId: number;
   lookNum: string;
   name: string;
   description: string;
   modelImage: string;
-  top: { name: string; category: string; costPriceGhs: number; sellingPriceGhs: number; sizes: string[] };
-  bottom: { name: string; category: string; costPriceGhs: number; sellingPriceGhs: number; sizes: string[] };
-  shoes: { name: string; category: string; costPriceGhs: number; sellingPriceGhs: number; sizes: string[] };
+  mode?: RunwayDisplayMode;
+  top: GarmentConfigInput;
+  bottom?: GarmentConfigInput;
+  shoes?: GarmentConfigInput;
 }): void {
   const products = getManagedProducts();
+  const activeMode: RunwayDisplayMode = params.mode || getRunwayDisplayMode();
   const topId = `fit-${params.lookId}-shirt`;
-  const bottomId = `fit-${params.lookId}-pants`;
-  const shoesId = `fit-${params.lookId}-shoes`;
+  const bottomId = activeMode >= 2 ? `fit-${params.lookId}-pants` : '';
+  const shoesId = activeMode === 3 ? `fit-${params.lookId}-shoes` : '';
 
   const upsert = (
     id: string,
-    item: { name: string; category: string; costPriceGhs: number; sellingPriceGhs: number; sizes: string[] },
+    item: GarmentConfigInput,
     defaultImg: string
   ) => {
+    if (!id) return;
     const existing = products.find((p) => p.id === id);
+    const img = item.image && item.image.trim() ? item.image.trim() : defaultImg;
     if (existing) {
       existing.name = item.name;
       existing.category = item.category;
       existing.costPriceGhs = item.costPriceGhs;
       existing.sellingPriceGhs = item.sellingPriceGhs;
       existing.sizes = item.sizes;
+      if (item.hasSizes !== undefined) existing.hasSizes = item.hasSizes;
+      if (item.specs !== undefined) existing.specs = item.specs;
+      if (item.image) existing.image = item.image;
       existing.assignedLookId = params.lookId;
     } else {
       products.push({
@@ -237,8 +300,10 @@ export function configureLookWithGarments(params: {
         costPriceGhs: item.costPriceGhs,
         sellingPriceGhs: item.sellingPriceGhs,
         stockQuantity: 24,
-        image: defaultImg,
+        image: img,
         sizes: item.sizes,
+        hasSizes: item.hasSizes,
+        specs: item.specs,
         vendor: 'Runway Atelier',
         assignedLookId: params.lookId,
       });
@@ -247,8 +312,12 @@ export function configureLookWithGarments(params: {
 
   const fallbackImg = `/assets/fit-${Math.min(6, Math.max(1, params.lookId))}-model.webp`;
   upsert(topId, params.top, fallbackImg);
-  upsert(bottomId, params.bottom, fallbackImg);
-  upsert(shoesId, params.shoes, fallbackImg);
+  if (activeMode >= 2 && params.bottom) {
+    upsert(bottomId, params.bottom, fallbackImg);
+  }
+  if (activeMode === 3 && params.shoes) {
+    upsert(shoesId, params.shoes, fallbackImg);
+  }
   saveManagedProducts(products);
 
   addOrUpdateRunwayLook({
@@ -257,6 +326,7 @@ export function configureLookWithGarments(params: {
     name: params.name,
     description: params.description,
     modelImage: params.modelImage || fallbackImg,
+    mode: activeMode,
     topProductId: topId,
     bottomProductId: bottomId,
     shoesProductId: shoesId,

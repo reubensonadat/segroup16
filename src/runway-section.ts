@@ -12,6 +12,12 @@ import {
 import { LOOKS, PRODUCTS, ProductItem } from './data';
 import { formatGhs, toGhs } from './currency';
 import { getBundleDiscountPercent } from './bundle-store';
+import {
+  getRunwayDisplayMode,
+  getManagedRunwayLooks,
+  getManagedProducts,
+  RunwayDisplayMode,
+} from './products-store';
 
 const STORAGE_KEY = 'runway-styling-bag-v3';
 
@@ -122,7 +128,11 @@ export class RunwaySection extends HTMLElement {
     this.measure(true);
     this.detectFeet();
     this.syncBundleDiscounts();
+    this.syncRunwayDisplayMode();
     window.addEventListener('runway:discount-updated', this.handleDiscountUpdated);
+    window.addEventListener('runway:mode-updated', () => this.syncRunwayDisplayMode());
+    window.addEventListener('runway:looks-updated', () => this.syncRunwayDisplayMode());
+    window.addEventListener('runway:products-updated', () => this.syncRunwayDisplayMode());
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const startOffset = prefersReduced ? 0 : 1.15;
@@ -226,6 +236,137 @@ export class RunwaySection extends HTMLElement {
       const ctaMobile = panel.querySelector<HTMLElement>('.rw__cta-m');
       if (ctaMobile) {
         ctaMobile.textContent = `Add full look — ${formatGhs(toGhs(bundleDiscounted))}`;
+      }
+    });
+  }
+
+  public syncRunwayDisplayMode() {
+    const mode = getRunwayDisplayMode();
+    const looks = getManagedRunwayLooks();
+    const products = getManagedProducts();
+    const percent = getBundleDiscountPercent();
+
+    // 1. Stage Figures & Pins
+    this.querySelectorAll<HTMLElement>('.rw__hero, .rw__model').forEach((hero) => {
+      const pinsContainer = hero.querySelector<HTMLElement>('.rw__pins');
+      const art = hero.querySelector<HTMLElement>('.rw__art');
+
+      if (mode === 1) {
+        if (pinsContainer) pinsContainer.style.display = 'none';
+        if (art) art.classList.add('rw__art--hero-single');
+      } else if (mode === 2) {
+        if (pinsContainer) {
+          pinsContainer.style.display = '';
+          hero.querySelectorAll<HTMLElement>('.rw__pin[data-rw-pin="1"], .rw__pin[data-rw-pin="2"]').forEach((p) => {
+            p.style.display = '';
+          });
+          hero.querySelectorAll<HTMLElement>('.rw__pin[data-rw-pin="3"]').forEach((p) => {
+            p.style.display = 'none';
+          });
+        }
+        if (art) art.classList.remove('rw__art--hero-single');
+      } else {
+        if (pinsContainer) {
+          pinsContainer.style.display = '';
+          hero.querySelectorAll<HTMLElement>('.rw__pin').forEach((p) => {
+            p.style.display = '';
+          });
+        }
+        if (art) art.classList.remove('rw__art--hero-single');
+      }
+    });
+
+    // 2. Pieces Header Label
+    if (this.piecesLabel) {
+      this.piecesLabel.textContent = mode === 1 ? 'Featured Hero' : mode === 2 ? '2 pieces' : '3 pieces';
+    }
+
+    // 3. Look Panels
+    if (!this.panels) return;
+    this.panels.forEach((panel, i) => {
+      const items = Array.from(panel.querySelectorAll<HTMLElement>('.rw__item'));
+      const look = looks[i];
+      const topProd = products.find((p) => p.id === look?.topProductId);
+
+      if (mode === 1) {
+        items.forEach((item, idx) => {
+          item.style.display = idx === 0 ? '' : 'none';
+        });
+
+        // Hide number badge on item 1
+        const numBadge = items[0]?.querySelector<HTMLElement>('.rw__num');
+        if (numBadge) numBadge.style.display = 'none';
+
+        // Inject / update Specs Table if available
+        if (topProd?.specs && Object.keys(topProd.specs).length > 0 && items[0]) {
+          let specsEl = items[0].querySelector<HTMLElement>('.rw__specs-table-wrap');
+          if (!specsEl) {
+            specsEl = document.createElement('div');
+            specsEl.className = 'rw__specs-table-wrap';
+            items[0].querySelector('.rw__info')?.appendChild(specsEl);
+          }
+          specsEl.innerHTML = `
+            <div class="rw__specs-head">SPECIFICATIONS:</div>
+            <table class="rw__specs-table">
+              ${Object.entries(topProd.specs)
+                .map(([k, v]) => `<tr><td class="rw__spec-k">${k}</td><td class="rw__spec-v">${v}</td></tr>`)
+                .join('')}
+            </table>
+          `;
+        }
+
+        // Hide bundle row
+        const bundleRow = panel.querySelector<HTMLElement>('.rw__bundle-row');
+        if (bundleRow) bundleRow.style.display = 'none';
+
+        const ctaAdd = panel.querySelector<HTMLElement>('.rw__cta-add');
+        const ctaM = panel.querySelector<HTMLElement>('.rw__cta-m');
+        const priceVal = topProd ? topProd.sellingPriceGhs : 0;
+        if (ctaAdd) ctaAdd.textContent = `Add Hero to Bag — ${formatGhs(priceVal)}`;
+        if (ctaM) ctaM.textContent = `Add to Bag — ${formatGhs(priceVal)}`;
+      } else if (mode === 2) {
+        items.forEach((item, idx) => {
+          item.style.display = idx < 2 ? '' : 'none';
+        });
+        const numBadge = items[0]?.querySelector<HTMLElement>('.rw__num');
+        if (numBadge) numBadge.style.display = '';
+
+        const bundleRow = panel.querySelector<HTMLElement>('.rw__bundle-row');
+        if (bundleRow) bundleRow.style.display = '';
+
+        const btmProd = products.find((p) => p.id === look?.bottomProductId);
+        const sum2 = (topProd?.sellingPriceGhs || 0) + (btmProd?.sellingPriceGhs || 0);
+        const disc2 = Math.round(sum2 * (percent / 100));
+        const bundle2 = Math.max(0, sum2 - disc2);
+
+        const noteEl = panel.querySelector<HTMLElement>('.rw__bundle-note');
+        if (noteEl) noteEl.textContent = percent > 0 ? `Duo combo: Save ${percent}% on 2 pieces` : '2-Piece Set';
+
+        const priceContainer = panel.querySelector<HTMLElement>('.rw__bundle-price');
+        if (priceContainer) {
+          if (percent > 0) {
+            priceContainer.innerHTML = `<s>${formatGhs(sum2)}</s> <strong>${formatGhs(bundle2)}</strong>`;
+          } else {
+            priceContainer.innerHTML = `<strong>${formatGhs(sum2)}</strong>`;
+          }
+        }
+
+        const ctaAdd = panel.querySelector<HTMLElement>('.rw__cta-add');
+        const ctaM = panel.querySelector<HTMLElement>('.rw__cta-m');
+        if (ctaAdd) ctaAdd.textContent = `Add 2-Piece Set to Bag`;
+        if (ctaM) ctaM.textContent = `Add 2 pieces — ${formatGhs(bundle2)}`;
+      } else {
+        items.forEach((item) => {
+          item.style.display = '';
+        });
+        const numBadge = items[0]?.querySelector<HTMLElement>('.rw__num');
+        if (numBadge) numBadge.style.display = '';
+
+        const bundleRow = panel.querySelector<HTMLElement>('.rw__bundle-row');
+        if (bundleRow) bundleRow.style.display = '';
+
+        const noteEl = panel.querySelector<HTMLElement>('.rw__bundle-note');
+        if (noteEl) noteEl.textContent = percent > 0 ? `Bundle all 3 and save ${percent}%` : 'Complete the 3-piece look';
       }
     });
   }
@@ -524,7 +665,8 @@ export class RunwaySection extends HTMLElement {
 
     // Update pieces label
     if (this.piecesLabel) {
-      this.piecesLabel.textContent = '3 pieces';
+      const activeMode = getRunwayDisplayMode();
+      this.piecesLabel.textContent = activeMode === 1 ? 'Featured Hero' : activeMode === 2 ? '2 pieces' : '3 pieces';
       if (!silent) {
         this.piecesLabel.classList.remove('is-swap');
         void this.piecesLabel.offsetHeight;
@@ -1067,6 +1209,22 @@ export class RunwaySection extends HTMLElement {
         return;
       }
 
+      // Single Hero Mode: direct click on hero image or stage opens hero item
+      const activeMode = getRunwayDisplayMode();
+      if (activeMode === 1) {
+        const stageHeroHit = target.closest<HTMLElement>('.rw__hero.is-on .rw__art, .rw__hero.is-on [data-model-image]');
+        if (stageHeroHit && !target.closest('.rw__zoom')) {
+          e.preventDefault();
+          this.engage();
+          const activePanel = this.panels[this.index];
+          const firstAddBtn = activePanel?.querySelector<HTMLElement>('.rw__item:first-child [data-rw-add]');
+          if (firstAddBtn) {
+            this.handlePlusToggle(firstAddBtn);
+          }
+          return;
+        }
+      }
+
       // 9. Pin
       const pinBtn = target.closest<HTMLElement>('.rw__pin');
       if (pinBtn) {
@@ -1162,6 +1320,15 @@ export class RunwaySection extends HTMLElement {
   private handlePlusToggle(addBtn: HTMLElement) {
     const card = addBtn.closest<HTMLElement>('.rw__item');
     if (!card || card.classList.contains('is-added')) return;
+
+    // Check if product has no sizes (e.g. Tech, MacBook, Watches, Bags)
+    const prods = getManagedProducts();
+    const cardTitle = card.getAttribute('data-title');
+    const matchedProd = prods.find((p) => p.name === cardTitle);
+    if (matchedProd && (matchedProd.hasSizes === false || !matchedProd.sizes || matchedProd.sizes.length === 0)) {
+      this.executeAddPiece(card, parseInt(card.dataset.selected || '1', 10) || 1);
+      return;
+    }
 
     if (this.isMobile) {
       this.openMobileSheet(card);
@@ -1357,13 +1524,23 @@ export class RunwaySection extends HTMLElement {
     const msgEl = activePanel.querySelector<HTMLElement>('[data-rw-msg]');
     if (msgEl) msgEl.textContent = '';
 
-    const cards = Array.from(activePanel.querySelectorAll<HTMLElement>('.rw__item'));
+    const cards = Array.from(activePanel.querySelectorAll<HTMLElement>('.rw__item')).filter(
+      (c) => c.style.display !== 'none'
+    );
     const unaddedCards = cards.filter((c) => !c.classList.contains('is-added'));
 
     const readyCards: HTMLElement[] = [];
     const pendingCards: HTMLElement[] = [];
+    const prods = getManagedProducts();
 
     unaddedCards.forEach((card) => {
+      const cardTitle = card.getAttribute('data-title');
+      const matchedProd = prods.find((p) => p.name === cardTitle);
+      if (matchedProd && (matchedProd.hasSizes === false || !matchedProd.sizes || matchedProd.sizes.length === 0)) {
+        card.dataset.touched = '1';
+        if (!card.dataset.selected) card.dataset.selected = '1';
+      }
+
       const isTouched = card.dataset.touched === '1';
       const variantId = card.dataset.selected;
       if (isTouched && variantId) {
