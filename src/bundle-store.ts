@@ -1,42 +1,39 @@
 import { LOOKS, PRODUCTS, ProductItem, LookData } from './data';
 import { StylingBagItem } from './runway-logic';
 import { toGhs } from './currency';
+import {
+  getStoreConfig,
+  updateStoreConfig,
+  getBundleDiscountForLook,
+  setBundleDiscountForLook,
+  DEFAULT_STORE_CONFIG,
+} from './store-config';
 
+export { getBundleDiscountForLook, setBundleDiscountForLook };
+
+export const DEFAULT_BUNDLE_DISCOUNT_PERCENT = DEFAULT_STORE_CONFIG.defaultBundleDiscountPercent;
 const BUNDLE_STORAGE_KEY = 'runway-bundle-discount-rate-v1';
-export const DEFAULT_BUNDLE_DISCOUNT_PERCENT = 10;
-let inMemoryDiscount = DEFAULT_BUNDLE_DISCOUNT_PERCENT;
 
 /**
  * Get the admin-configured Look Bundle discount percentage (e.g. 10 for 10%)
  */
 export function getBundleDiscountPercent(): number {
-  try {
-    if (typeof localStorage === 'undefined') return inMemoryDiscount;
-    const raw = localStorage.getItem(BUNDLE_STORAGE_KEY);
-    if (!raw) return DEFAULT_BUNDLE_DISCOUNT_PERCENT;
-    const parsed = parseFloat(raw);
-    return isNaN(parsed) || parsed < 0 ? DEFAULT_BUNDLE_DISCOUNT_PERCENT : Math.min(parsed, 100);
-  } catch {
-    return inMemoryDiscount;
-  }
+  return getStoreConfig().defaultBundleDiscountPercent;
 }
 
 /**
  * Update the admin-configured Look Bundle discount percentage
  */
 export function setBundleDiscountPercent(percent: number): void {
+  const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
   try {
-    const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
-    inMemoryDiscount = safePercent;
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(BUNDLE_STORAGE_KEY, String(safePercent));
     }
-    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-      window.dispatchEvent(new CustomEvent('runway:discount-updated', { detail: { percent: safePercent } }));
-    }
-  } catch (e) {
-    console.error('Failed to save bundle discount', e);
+  } catch {
+    // fallback
   }
+  updateStoreConfig({ defaultBundleDiscountPercent: safePercent });
 }
 
 export interface DetectedBundleItem {
@@ -72,11 +69,10 @@ export interface CartBundleAnalysis {
  * and computes the admin-configured discount.
  */
 export function analyzeCartBundles(cartItems: StylingBagItem[]): CartBundleAnalysis {
-  const discountPercent = getBundleDiscountPercent();
   const detectedBundles: DetectedBundle[] = [];
   const bundledVariantIds = new Set<number>();
 
-  if (discountPercent <= 0 || cartItems.length === 0) {
+  if (cartItems.length === 0) {
     return {
       bundles: [],
       totalBundleDiscountGhs: 0,
@@ -100,8 +96,12 @@ export function analyzeCartBundles(cartItems: StylingBagItem[]): CartBundleAnaly
     }
   }
 
-  // Check each of the 6 looks
+  // Check each of the looks
   for (const look of LOOKS) {
+    const lookId = look.index + 1;
+    const discountPercent = getBundleDiscountForLook(lookId);
+    if (discountPercent <= 0) continue;
+
     const requiredProductIds = look.items.map((it) => it.productId);
     if (requiredProductIds.length < 3) continue;
 

@@ -12,6 +12,12 @@ import { bindDropdowns, renderDropdown } from '../dropdown.tsx';
 import { getCreatorsKitReceiptUrl } from '../creators-kit';
 import { getBundleDiscountPercent, setBundleDiscountPercent } from '../bundle-store';
 import {
+  getStoreConfig,
+  updateStoreConfig,
+  getBundleDiscountForLook,
+  setBundleDiscountForLook,
+} from '../store-config';
+import {
   getManagedProducts,
   getManagedRunwayLooks,
   configureLookWithGarments,
@@ -688,16 +694,69 @@ function renderOrdersSection(): string {
 
 /* ─── SECTION 4: STORE SETTINGS ─────────────────────────────────────────── */
 function renderSettingsSection(): string {
+  const config = getStoreConfig();
+  const looks = getManagedRunwayLooks();
+  const defaultRate = config.defaultBundleDiscountPercent;
+
+  const lookRowsHtml = looks.map((look) => {
+    const override = config.perLookBundleDiscounts?.[look.id];
+    const hasOverride = typeof override === 'number' && !isNaN(override) && override >= 0;
+    const effectiveDiscount = hasOverride ? override : defaultRate;
+
+    return `
+      <tr class="ap-table-row">
+        <td>
+          <span class="ap-badge ap-badge--dark">LOOK ${look.lookNum}</span>
+        </td>
+        <td>
+          <strong>${look.name}</strong>
+          <div class="ap-cell-sub">${look.description.slice(0, 48)}…</div>
+        </td>
+        <td>
+          <span class="ap-badge">${look.mode === 1 ? 'HERO (1)' : look.mode === 2 ? 'DUO (2)' : 'OUTFIT (3)'}</span>
+        </td>
+        <td>
+          <span class="ap-badge ${hasOverride ? 'ap-badge--dark' : ''}">
+            ${effectiveDiscount}% ${hasOverride ? 'OVERRIDE' : 'DEFAULT'}
+          </span>
+        </td>
+        <td style="width: 140px;">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            id="ap-look-override-${look.id}"
+            class="ap-input ap-input--sm ap-look-override-input"
+            data-look-id="${look.id}"
+            value="${hasOverride ? override : ''}"
+            placeholder="Default (${defaultRate}%)"
+          />
+        </td>
+        <td>
+          <button
+            type="button"
+            class="brand-btn brand-btn--sm ap-reset-look-btn"
+            data-reset-look-id="${look.id}"
+            title="Reset this look to use the global storewide rate"
+          >
+            DEFAULT
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
   return `
     <section class="ap-section" id="ap-settings">
       <div class="ap-page-head">
         <div>
-          <div class="ap-kicker">ATELIER CONFIGURATION</div>
+          <div class="ap-kicker">ATELIER CONFIGURATION & BACKEND CONTRACT</div>
           <h1 class="ap-page-title">Storefront Settings</h1>
         </div>
       </div>
 
       <div class="ap-two-col-grid">
+        <!-- Brand & Hub Profile -->
         <div class="ap-card ap-panel">
           <div class="ap-panel-head">
             <span class="ap-kicker">BRAND IDENTITY & HUB</span>
@@ -705,24 +764,42 @@ function renderSettingsSection(): string {
           </div>
           <div class="ap-field-row">
             <label class="ap-label">STORE / BRAND NAME</label>
-            <input type="text" class="ap-input" placeholder="e.g. Around Clothing" value="Around Clothing" />
+            <input type="text" id="ap-brand-name" class="ap-input" placeholder="e.g. Around Clothing" value="${config.brandName}" />
           </div>
           <div class="ap-field-row">
             <label class="ap-label">OFFICIAL INSTAGRAM HANDLE</label>
-            <input type="text" class="ap-input" placeholder="@around_clothingg" value="@around_clothingg" />
+            <input type="text" id="ap-brand-instagram" class="ap-input" placeholder="@around_clothingg" value="${config.instagramHandle}" />
           </div>
           <div class="ap-field-row">
             <label class="ap-label">ACCRA PICKUP HUB LOCATION</label>
-            <input type="text" class="ap-input" placeholder="e.g. Oxford Street, Osu, Accra" value="Oxford Street, Osu Atelier Hub" />
+            <input type="text" id="ap-brand-pickup" class="ap-input" placeholder="e.g. Oxford Street, Osu, Accra" value="${config.pickupAddress}" />
           </div>
-          <div class="ap-field-row">
-            <label class="ap-label">MTN MOMO MERCHANT / VENDOR NUMBER</label>
-            <input type="text" class="ap-input" placeholder="e.g. 024 456 7890" value="024 555 0192" />
+          <div class="ap-two-col-grid" style="gap: 12px; margin-top: 0;">
+            <div class="ap-field-row">
+              <label class="ap-label">MTN MOMO MERCHANT NUMBER</label>
+              <input type="text" id="ap-brand-momo" class="ap-input" placeholder="e.g. 024 555 0192" value="${config.momoNumber}" />
+            </div>
+            <div class="ap-field-row">
+              <label class="ap-label">MOMO ACCOUNT HOLDER NAME</label>
+              <input type="text" id="ap-brand-momo-name" class="ap-input" placeholder="e.g. Around Clothing Ltd" value="${config.momoAccountName}" />
+            </div>
           </div>
-          <button class="brand-btn brand-btn--dark" style="margin-top: 12px;">SAVE BRAND PROFILE</button>
+          <div class="ap-two-col-grid" style="gap: 12px; margin-top: 0;">
+            <div class="ap-field-row">
+              <label class="ap-label">SUPPORT PHONE (WHATSAPP)</label>
+              <input type="text" id="ap-brand-phone" class="ap-input" placeholder="+233 24 555 0192" value="${config.supportPhone}" />
+            </div>
+            <div class="ap-field-row">
+              <label class="ap-label">SUPPORT / CONCIERGE EMAIL</label>
+              <input type="email" id="ap-brand-email" class="ap-input" placeholder="concierge@aroundclothing.store" value="${config.supportEmail}" />
+            </div>
+          </div>
+          <button id="ap-save-brand-btn" class="brand-btn brand-btn--dark" style="margin-top: 12px;">SAVE BRAND PROFILE</button>
+          <div id="ap-brand-feedback" class="ap-feedback-banner" hidden></div>
         </div>
 
         <div>
+          <!-- Global Bundle Discount Rate -->
           <div class="ap-card ap-panel">
             <div class="ap-panel-head">
               <span class="ap-kicker">GLOBAL DISCOUNT CONTROLS</span>
@@ -732,15 +809,60 @@ function renderSettingsSection(): string {
               When modified here, this percentage updates across all 12 runway outfit calculations, the 3D runway presentation, and the checkout cart.
             </p>
             <div class="ap-field-row">
-              <label class="ap-label">GLOBAL BUNDLE DISCOUNT (%)</label>
+              <label class="ap-label">STOREWIDE DEFAULT BUNDLE DISCOUNT (%)</label>
               <div class="ap-input-with-btn">
-                <input type="number" id="ap-settings-bundle-rate" min="0" max="100" value="${getBundleDiscountPercent()}" class="ap-input ap-input--rate" />
+                <input type="number" id="ap-settings-bundle-rate" min="0" max="100" value="${config.defaultBundleDiscountPercent}" class="ap-input ap-input--rate" />
                 <button id="ap-settings-save-rate-btn" class="brand-btn brand-btn--dark brand-btn--sm">APPLY RATE</button>
               </div>
             </div>
             <div id="ap-settings-rate-feedback" class="ap-feedback-banner" hidden></div>
           </div>
 
+          <!-- Logistics & Fulfillment Fees -->
+          <div class="ap-card ap-panel" style="margin-top: 16px;">
+            <div class="ap-panel-head">
+              <span class="ap-kicker">LOGISTICS & DISPATCH</span>
+              <h3>Fulfillment & Delivery Fees</h3>
+            </div>
+            <p class="ap-panel-desc">
+              Configure doorstep courier shipping rates, store pickup notices, and free delivery thresholds across Greater Accra.
+            </p>
+
+            <div class="ap-field-row" style="margin-bottom: 16px;">
+              <label class="ap-checkbox-label" style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="ap-delivery-charge-toggle" ${config.chargeDeliveryFee ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #151413;" />
+                <span>ENABLE COURIER DELIVERY FEE (APPLY COURIER CHARGE)</span>
+              </label>
+              <div class="ap-cell-sub" style="margin-left: 26px;">When unchecked, all doorstep deliveries across the store are complimentary.</div>
+            </div>
+
+            <div class="ap-two-col-grid" style="gap: 12px; margin-top: 0;">
+              <div class="ap-field-row">
+                <label class="ap-label">STANDARD COURIER FEE (GH₵)</label>
+                <input type="number" id="ap-delivery-fee-input" min="0" step="1" class="ap-input" value="${config.deliveryFeeGhs}" />
+              </div>
+              <div class="ap-field-row">
+                <label class="ap-label">FREE DELIVERY THRESHOLD (GH₵)</label>
+                <input type="number" id="ap-delivery-threshold-input" min="0" step="10" class="ap-input" value="${config.freeDeliveryThresholdGhs}" />
+                <div class="ap-cell-sub">Orders at or above this value get free delivery. Enter 0 to disable threshold.</div>
+              </div>
+            </div>
+
+            <div class="ap-field-row">
+              <label class="ap-label">DOORSTEP DISPATCH TURNAROUND / ETA</label>
+              <input type="text" id="ap-delivery-turnaround-input" class="ap-input" value="${config.deliveryTurnaround}" />
+            </div>
+
+            <div class="ap-field-row">
+              <label class="ap-label">STORE PICKUP TURNAROUND / ETA</label>
+              <input type="text" id="ap-pickup-turnaround-input" class="ap-input" value="${config.pickupTurnaround}" />
+            </div>
+
+            <button id="ap-save-delivery-btn" class="brand-btn brand-btn--dark" style="margin-top: 12px;">SAVE FULFILLMENT SETTINGS</button>
+            <div id="ap-delivery-feedback" class="ap-feedback-banner" hidden></div>
+          </div>
+
+          <!-- Studio Actions -->
           <div class="ap-card ap-panel" style="margin-top: 16px;">
             <div class="ap-panel-head">
               <span class="ap-kicker">STUDIO ACTIONS</span>
@@ -763,6 +885,42 @@ function renderSettingsSection(): string {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Advanced Per-Look Bundle Discount Overrides Table -->
+      <div class="ap-card ap-panel" style="margin-top: 24px;">
+        <div class="ap-panel-head" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="ap-kicker">ADVANCED RUNWAY PRICING</span>
+            <h3>Per-Look Bundle Discount Overrides</h3>
+            <p class="ap-panel-desc" style="margin: 4px 0 0;">
+              Customize discount percentages for individual runway sets. Any look without a custom override will automatically use the global default (${defaultRate}%).
+            </p>
+          </div>
+          <button id="ap-save-look-overrides-btn" class="brand-btn brand-btn--dark">
+            SAVE ALL LOOK OVERRIDES
+          </button>
+        </div>
+
+        <div id="ap-overrides-feedback" class="ap-feedback-banner" hidden></div>
+
+        <div class="ap-table-wrap" style="margin-top: 16px;">
+          <table class="ap-table">
+            <thead>
+              <tr>
+                <th>LOOK #</th>
+                <th>LOOK / OUTFIT NAME</th>
+                <th>RUNWAY MODE</th>
+                <th>ACTIVE DISCOUNT</th>
+                <th>CUSTOM OVERRIDE (%)</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lookRowsHtml}
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1572,6 +1730,110 @@ export function bindAdminEvents(container: HTMLElement): void {
     const inp = container.querySelector('#ap-settings-bundle-rate') as HTMLInputElement | null;
     const val = parseFloat(inp?.value || '10');
     syncDiscount(isNaN(val) ? 10 : Math.max(0, Math.min(100, val)));
+  });
+
+  // Save Brand Profile
+  container.querySelector('#ap-save-brand-btn')?.addEventListener('click', () => {
+    const brandName = (container.querySelector('#ap-brand-name') as HTMLInputElement)?.value.trim() || 'Around Clothing';
+    const instagramHandle = (container.querySelector('#ap-brand-instagram') as HTMLInputElement)?.value.trim() || '';
+    const pickupAddress = (container.querySelector('#ap-brand-pickup') as HTMLInputElement)?.value.trim() || '';
+    const momoNumber = (container.querySelector('#ap-brand-momo') as HTMLInputElement)?.value.trim() || '';
+    const momoAccountName = (container.querySelector('#ap-brand-momo-name') as HTMLInputElement)?.value.trim() || '';
+    const supportPhone = (container.querySelector('#ap-brand-phone') as HTMLInputElement)?.value.trim() || '';
+    const supportEmail = (container.querySelector('#ap-brand-email') as HTMLInputElement)?.value.trim() || '';
+
+    updateStoreConfig({
+      brandName,
+      instagramHandle,
+      pickupAddress,
+      momoNumber,
+      momoAccountName,
+      supportPhone,
+      supportEmail,
+    });
+
+    const fb = container.querySelector('#ap-brand-feedback') as HTMLElement | null;
+    if (fb) {
+      fb.hidden = false;
+      fb.textContent = 'Brand profile and boutique hub details saved successfully.';
+      setTimeout(() => {
+        fb.hidden = true;
+      }, 3500);
+    }
+  });
+
+  // Save Delivery & Shipping Settings
+  container.querySelector('#ap-save-delivery-btn')?.addEventListener('click', () => {
+    const chargeDeliveryFee = (container.querySelector('#ap-delivery-charge-toggle') as HTMLInputElement)?.checked ?? true;
+    const feeVal = parseFloat((container.querySelector('#ap-delivery-fee-input') as HTMLInputElement)?.value || '35');
+    const threshVal = parseFloat((container.querySelector('#ap-delivery-threshold-input') as HTMLInputElement)?.value || '1200');
+    const deliveryTurnaround = (container.querySelector('#ap-delivery-turnaround-input') as HTMLInputElement)?.value.trim() || 'Same-day doorstep courier dispatch in Greater Accra';
+    const pickupTurnaround = (container.querySelector('#ap-pickup-turnaround-input') as HTMLInputElement)?.value.trim() || 'Ready for pickup within 2 hours at Osu Flagship';
+
+    updateStoreConfig({
+      chargeDeliveryFee,
+      deliveryFeeGhs: isNaN(feeVal) ? 35 : feeVal,
+      freeDeliveryThresholdGhs: isNaN(threshVal) ? 1200 : threshVal,
+      deliveryTurnaround,
+      pickupTurnaround,
+    });
+
+    const fb = container.querySelector('#ap-delivery-feedback') as HTMLElement | null;
+    if (fb) {
+      fb.hidden = false;
+      fb.textContent = 'Fulfillment and courier delivery fee configuration updated successfully.';
+      setTimeout(() => {
+        fb.hidden = true;
+      }, 3500);
+    }
+  });
+
+  // Reset Individual Look Override
+  container.querySelectorAll<HTMLButtonElement>('.ap-reset-look-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const lookId = parseInt(btn.dataset.resetLookId || '0', 10);
+      if (!lookId) return;
+      setBundleDiscountForLook(lookId, null);
+      const pc = document.getElementById('page-content');
+      if (pc) {
+        pc.innerHTML = renderAdminPage();
+        bindAdminEvents(pc);
+        activateNav('ap-settings');
+      }
+    });
+  });
+
+  // Save All Look Overrides
+  container.querySelector('#ap-save-look-overrides-btn')?.addEventListener('click', () => {
+    const inputs = container.querySelectorAll<HTMLInputElement>('.ap-look-override-input');
+    inputs.forEach((inp) => {
+      const lookId = parseInt(inp.dataset.lookId || '0', 10);
+      if (!lookId) return;
+      const valStr = inp.value.trim();
+      if (!valStr) {
+        setBundleDiscountForLook(lookId, null);
+      } else {
+        const num = parseFloat(valStr);
+        if (!isNaN(num) && num >= 0) {
+          setBundleDiscountForLook(lookId, num);
+        }
+      }
+    });
+
+    const pc = document.getElementById('page-content');
+    if (pc) {
+      pc.innerHTML = renderAdminPage();
+      bindAdminEvents(pc);
+      activateNav('ap-settings');
+      const fb = pc.querySelector('#ap-overrides-feedback') as HTMLElement | null;
+      if (fb) {
+        fb.hidden = false;
+        fb.textContent = 'Per-look bundle discounts saved and synchronized across storefront!';
+        setTimeout(() => {
+          fb.hidden = true;
+        }, 3500);
+      }
+    }
   });
 
   // Reset seed demo orders

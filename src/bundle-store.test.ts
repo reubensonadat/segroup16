@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   getBundleDiscountPercent,
   setBundleDiscountPercent,
+  getBundleDiscountForLook,
+  setBundleDiscountForLook,
   analyzeCartBundles,
 } from './bundle-store';
 import { PRODUCTS } from './data';
@@ -62,4 +64,34 @@ test('analyzeCartBundles automatically detects complete 3-piece look bundle and 
   assert.strictEqual(result.bundledVariantIds.has(pantsVariant), true);
   assert.strictEqual(result.bundledVariantIds.has(shoesVariant), true);
 });
+
+test('analyzeCartBundles applies per-look discount overrides when configured', () => {
+  setBundleDiscountPercent(10); // Global default 10%
+  setBundleDiscountForLook(1, 25); // Look 1 override: 25%
+
+  const shirtVariant = PRODUCTS['fit-1-shirt'].variants[0].id;
+  const pantsVariant = PRODUCTS['fit-1-pants'].variants[0].id;
+  const shoesVariant = PRODUCTS['fit-1-shoes'].variants[0].id;
+
+  const result = analyzeCartBundles([
+    { id: shirtVariant, quantity: 1 },
+    { id: pantsVariant, quantity: 1 },
+    { id: shoesVariant, quantity: 1 },
+  ]);
+
+  assert.strictEqual(result.bundles.length, 1);
+  assert.strictEqual(result.bundles[0].discountPercent, 25);
+
+  const expectedRegularGhs =
+    toGhs(PRODUCTS['fit-1-shirt'].price) +
+    toGhs(PRODUCTS['fit-1-pants'].price) +
+    toGhs(PRODUCTS['fit-1-shoes'].price);
+
+  const expectedDiscountGhs = Math.round(expectedRegularGhs * 0.25 * 100) / 100;
+  assert.strictEqual(result.totalBundleDiscountGhs, expectedDiscountGhs);
+
+  // Clean up override
+  setBundleDiscountForLook(1, null);
+});
+
 

@@ -7,6 +7,7 @@ import { detectCustomerLocation } from '../location';
 import { fetchRoadRoute } from '../lib/roadRoute';
 import { analyzeCartBundles } from '../bundle-store';
 import { getActiveBrand } from '../brand-presets';
+import { getStoreConfig, calculateShippingFee } from '../store-config';
 
 const STORAGE_KEY = 'runway-styling-bag-v3';
 
@@ -116,7 +117,9 @@ export function renderCartPage(): string {
     })
     .join('');
 
-  const total = Math.max(0, subtotal - totalBundleDiscount);
+  const storeConfig = getStoreConfig();
+  const defaultShipping = calculateShippingFee('delivery', subtotal);
+  const total = Math.max(0, subtotal - totalBundleDiscount + defaultShipping.feeGhs);
 
   const bundleBannerHtml =
     bundleAnalysis.bundles.length > 0
@@ -174,9 +177,23 @@ export function renderCartPage(): string {
               : ''
           }
           <div class="cart-summary-line">
-            <span>Shipping</span>
-            <span class="cart-free-tag">Free Express</span>
+            <span>Courier Delivery</span>
+            ${
+              defaultShipping.isFree
+                ? `<span class="cart-free-tag">${storeConfig.chargeDeliveryFee && storeConfig.freeDeliveryThresholdGhs > 0 ? `FREE (Over ${formatGhs(storeConfig.freeDeliveryThresholdGhs)})` : 'FREE EXPRESS'}</span>`
+                : `<strong>${formatGhs(defaultShipping.feeGhs)}</strong>`
+            }
           </div>
+          ${
+            defaultShipping.thresholdRemainingGhs > 0
+              ? `
+              <div class="cart-threshold-banner">
+                <span class="cart-threshold-pill">DELIVERY PERK</span>
+                <span>Add <strong>${formatGhs(defaultShipping.thresholdRemainingGhs)}</strong> more to unlock Free Doorstep Delivery!</span>
+              </div>
+              `
+              : ''
+          }
           <div class="cart-summary-divider"></div>
           <div class="cart-summary-line cart-summary-line--total">
             <span>Total</span>
@@ -194,7 +211,7 @@ export function renderCartPage(): string {
           </button>
 
           <div class="cart-perks">
-            <div>✓ Official ${activeBrand.name} Authenticity Guaranteed</div>
+            <div>✓ Official ${storeConfig.brandName || activeBrand.name} Authenticity Guaranteed</div>
             <div>✓ 30-Day Complimentary Returns</div>
             <div>✓ Encrypted SSL Checkout</div>
           </div>
@@ -229,14 +246,14 @@ export function renderCartPage(): string {
                   <label class="checkout-choice-card">
                     <input type="radio" name="fulfillment" value="delivery" checked />
                     <span class="checkout-choice-icon">DOORSTEP DISPATCH</span>
-                    <strong>Free Delivery</strong>
-                    <small>Rider brings package directly to my GPS address</small>
+                    <strong>Doorstep Delivery (${defaultShipping.isFree ? 'FREE' : formatGhs(storeConfig.deliveryFeeGhs)})</strong>
+                    <small>${storeConfig.deliveryTurnaround}</small>
                   </label>
                   <label class="checkout-choice-card">
                     <input type="radio" name="fulfillment" value="pickup" />
                     <span class="checkout-choice-icon">STORE PICKUP</span>
-                    <strong>In-Store Boutique Collection</strong>
-                    <small>Pick up at Osu / Accra Mall Flagship</small>
+                    <strong>In-Store Boutique Collection (FREE)</strong>
+                    <small>${storeConfig.pickupAddress} · ${storeConfig.pickupTurnaround}</small>
                   </label>
                 </div>
               </div>
@@ -263,7 +280,7 @@ export function renderCartPage(): string {
                       <span class="kola-point-dot kola-point-dot--origin"></span>
                       <div>
                         <strong>Boutique Flagship Hub</strong>
-                        <small>Osu Oxford Street, Accra</small>
+                        <small>${storeConfig.pickupAddress}</small>
                       </div>
                     </div>
                     <div class="kola-route-connector">
@@ -280,7 +297,9 @@ export function renderCartPage(): string {
                   </div>
                   <div class="kola-route-footer">
                     <span>Courier Dispatch Fee:</span>
-                    <strong class="kola-free-tag">FREE (Promotional Drop)</strong>
+                    <strong id="kola-route-fee-display" class="${defaultShipping.isFree ? 'kola-free-tag' : ''}">
+                      ${defaultShipping.isFree ? 'FREE (Promotional / Threshold)' : formatGhs(defaultShipping.feeGhs)}
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -326,12 +345,12 @@ export function renderCartPage(): string {
 
             <div class="checkout-modal-summary">
               <div>Subtotal: ${formatGhs(subtotal)}</div>
-              <div>Courier Express Shipping: <span class="track-free">FREE</span></div>
-              <strong class="checkout-total-line">Total Due: ${formatGhs(total)}</strong>
+              <div>Courier Express Shipping: <span id="checkout-modal-shipping-text" class="${defaultShipping.isFree ? 'track-free' : ''}">${defaultShipping.isFree ? 'FREE' : formatGhs(defaultShipping.feeGhs)}</span></div>
+              <strong class="checkout-total-line">Total Due: <span id="checkout-modal-total-text">${formatGhs(total)}</span></strong>
             </div>
 
             <button type="submit" id="submit-order-btn" class="brand-btn brand-btn--dark checkout-submit-btn">
-              Authorize Payment — ${formatGhs(total)}
+              Authorize Payment — <span id="checkout-btn-total">${formatGhs(total)}</span>
             </button>
           </form>
         </div>
@@ -444,19 +463,62 @@ export function bindCartEvents(container: HTMLElement) {
   const locationStatus = container.querySelector<HTMLElement>('#location-status');
   const locationField = container.querySelector<HTMLElement>('#use-location-btn')?.closest<HTMLElement>('.form-field');
   const fulfillmentInputs = container.querySelectorAll<HTMLInputElement>('input[name="fulfillment"]');
-  const updateLocationRequirement = (value: string) => {
+  const updateFulfillmentMode = (value: string) => {
     const isDelivery = value === 'delivery';
     if (locationField) locationField.hidden = !isDelivery;
-    if (!isDelivery && locationStatus) locationStatus.textContent = 'No location needed for store pickup.';
+    if (!isDelivery && locationStatus) locationStatus.textContent = 'No location needed for boutique pickup.';
     if (isDelivery && locationStatus && !container.querySelector<HTMLInputElement>('#c-location')?.value) {
-      locationStatus.textContent = 'Required for free delivery. Optional for pickup.';
+      locationStatus.textContent = 'Required for courier dispatch. Optional for store pickup.';
+    }
+
+    // Recompute delivery fee & total dynamically in checkout modal
+    const currentBag = getBagItems();
+    let cartSubtotalGhs = 0;
+    currentBag.forEach((entry) => {
+      for (const prod of Object.values(PRODUCTS)) {
+        if (prod.variants.some((v) => v.id === entry.id)) {
+          cartSubtotalGhs += toGhs(prod.price) * entry.quantity;
+          break;
+        }
+      }
+    });
+
+    const bundleAnalysis = analyzeCartBundles(currentBag);
+    const shippingCalc = calculateShippingFee(isDelivery ? 'delivery' : 'pickup', cartSubtotalGhs);
+    const modalTotalGhs = Math.max(0, cartSubtotalGhs - bundleAnalysis.totalBundleDiscountGhs + shippingCalc.feeGhs);
+
+    const shippingText = container.querySelector('#checkout-modal-shipping-text');
+    if (shippingText) {
+      shippingText.textContent = shippingCalc.isFree ? (isDelivery ? 'FREE (Threshold / Promo)' : 'FREE (Pickup)') : formatGhs(shippingCalc.feeGhs);
+      shippingText.className = shippingCalc.isFree ? 'track-free' : '';
+    }
+
+    const modalTotalText = container.querySelector('#checkout-modal-total-text');
+    if (modalTotalText) modalTotalText.textContent = formatGhs(modalTotalGhs);
+
+    const btnTotalText = container.querySelector('#checkout-btn-total');
+    if (btnTotalText) btnTotalText.textContent = formatGhs(modalTotalGhs);
+
+    const routeFeeDisplay = container.querySelector('#kola-route-fee-display');
+    if (routeFeeDisplay) {
+      if (!isDelivery) {
+        routeFeeDisplay.textContent = 'FREE (Store Pickup)';
+        routeFeeDisplay.className = 'kola-free-tag';
+      } else if (shippingCalc.isFree) {
+        routeFeeDisplay.textContent = 'FREE (Promotional Drop)';
+        routeFeeDisplay.className = 'kola-free-tag';
+      } else {
+        routeFeeDisplay.textContent = formatGhs(shippingCalc.feeGhs);
+        routeFeeDisplay.className = '';
+      }
     }
   };
+
   fulfillmentInputs.forEach((input) => {
-    input.addEventListener('change', () => updateLocationRequirement(input.value));
+    input.addEventListener('change', () => updateFulfillmentMode(input.value));
   });
   const selectedFulfillment = container.querySelector<HTMLInputElement>('input[name="fulfillment"]:checked');
-  updateLocationRequirement(selectedFulfillment?.value || 'delivery');
+  updateFulfillmentMode(selectedFulfillment?.value || 'delivery');
   // Ghana Phone & MoMo Auto-detection
   const phoneInput = container.querySelector('#c-phone') as HTMLInputElement | null;
   const networkBadge = container.querySelector('#phone-network-badge') as HTMLElement | null;
@@ -577,12 +639,16 @@ export function bindCartEvents(container: HTMLElement) {
     const bundleDiscountUsd = bundleAnalysis.totalBundleDiscountGhs / 10;
     const bundleName = bundleAnalysis.bundles.map((b) => b.lookName).join(', ');
 
+    // Calculate dynamic delivery fee for selected fulfillment
+    const shippingCalc = calculateShippingFee(fulfillment, toGhs(subtotal));
+    const shippingUsd = shippingCalc.feeUsd;
+
     // Create and save real order
     const created = createOrder(
       customer,
       orderItems,
       subtotal,
-      0,
+      shippingUsd,
       0,
       paymentMethod,
       bundleDiscountUsd,

@@ -3014,6 +3014,29 @@ runway-section {
   font-weight: 600;
 }
 
+.cart-threshold-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fbf9f4;
+  border: 1.5px solid #151413;
+  padding: 8px 12px;
+  margin: 10px 0 14px;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: #151413;
+}
+
+.cart-threshold-pill {
+  background: #151413;
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 6px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .cart-summary-divider {
   height: 1px;
   background: #e4e4e4;

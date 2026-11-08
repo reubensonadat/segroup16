@@ -1,7 +1,12 @@
 import { PRODUCTS, LOOKS, ProductItem, LookData } from './data';
 import { toGhs } from './currency';
+import {
+  getStoreConfig,
+  updateStoreConfig,
+  type RunwayDisplayMode,
+} from './store-config';
 
-export type RunwayDisplayMode = 1 | 2 | 3;
+export type { RunwayDisplayMode };
 
 export interface ManagedProduct {
   id: string;
@@ -36,35 +41,17 @@ const PRODUCTS_STORAGE_KEY = 'runway-managed-products-v1';
 const LOOKS_STORAGE_KEY = 'runway-managed-looks-v1';
 const RUNWAY_MODE_STORAGE_KEY = 'runway-display-mode-v1';
 
-let inMemoryRunwayMode: RunwayDisplayMode = 3;
-
 export function getRunwayDisplayMode(): RunwayDisplayMode {
-  try {
-    if (typeof localStorage === 'undefined') {
-      return inMemoryRunwayMode;
-    }
-    const val = localStorage.getItem(RUNWAY_MODE_STORAGE_KEY);
-    if (val === '1' || val === '2' || val === '3') {
-      return parseInt(val, 10) as RunwayDisplayMode;
-    }
-    return 3;
-  } catch {
-    return inMemoryRunwayMode;
-  }
+  return getStoreConfig().runwayDisplayMode;
 }
 
 export function setRunwayDisplayMode(mode: RunwayDisplayMode): void {
-  inMemoryRunwayMode = mode;
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(RUNWAY_MODE_STORAGE_KEY, String(mode));
-      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-        window.dispatchEvent(new CustomEvent('runway:mode-updated', { detail: { mode } }));
-      }
     }
-  } catch (e) {
-    console.error('Failed to save runway display mode', e);
-  }
+  } catch {}
+  updateStoreConfig({ runwayDisplayMode: mode });
 }
 
 // Estimated realistic fashion production cost ratio (~40% of retail in Accra)

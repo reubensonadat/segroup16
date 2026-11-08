@@ -23,3 +23,4 @@ test('compressImageToWebp safely processes image input and returns compression m
   assert.ok(typeof result.compressedSize === 'number');
   assert.ok(typeof result.savedPercent === 'number');
 });
+
