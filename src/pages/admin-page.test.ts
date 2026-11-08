@@ -16,3 +16,4 @@ test('renderAdminPage includes modal sheet container and edit product triggers i
   assert.ok(html.includes('data-configure-slot='), 'Look cards must have data-configure-slot triggers');
   assert.ok(html.includes('data-edit-prod='), 'Garments must have data-edit-prod edit triggers');
 });
+
