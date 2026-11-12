@@ -1,4 +1,4 @@
- import {
+import {
   getOrders,
   getOrderStats,
   updateOrderStatus,
@@ -146,14 +146,14 @@ function renderOverviewSection(): string {
               </div>
             </div>
             <div class="ap-pipe-item">
-              <div class="ap-pipe-info">
-                <span>In Transit (Courier)</span>
-                <strong>${stats.shippedCount}</strong>
-              </div>
-              <div class="ap-pipe-track">
-                <div class="ap-pipe-fill" style="width: ${Math.round((stats.shippedCount / Math.max(stats.totalOrders, 1)) * 100)}%"></div>
-              </div>
-            </div>
+               <div class="ap-pipe-info">
+                 <span>In Transit / Ready for Pickup</span>
+                 <strong>${stats.shippedCount}</strong>
+               </div>
+               <div class="ap-pipe-track">
+                 <div class="ap-pipe-fill" style="width: ${Math.round((stats.shippedCount / Math.max(stats.totalOrders, 1)) * 100)}%"></div>
+               </div>
+             </div>
             <div class="ap-pipe-item">
               <div class="ap-pipe-info">
                 <span>Delivered / Collected</span>
@@ -1208,17 +1208,17 @@ function renderLookConfigForm(slotId: number): string {
         </div>
 
         ${renderWebpDropzoneHtml({
-          dropzoneId: 'ap-stage-dropzone',
-          fileInputId: 'ap-stage-file-input',
-          statPillId: 'ap-stage-webp-stat',
-          hiddenInputName: 'modelImage',
-          hiddenInputId: 'ap-form-model-url',
-          previewImgId: 'ap-live-model-preview',
-          urlFallbackInputId: 'ap-stage-url-fallback',
-          initialValue: stageImg,
-          label: '3D STAGE HERO / MODEL PHOTO (AUTOMATIC WEBP COMPRESSION)',
-          hint: 'PNG (transparent cutout) or JPG · WebP compressed with Alpha Transparency preserved',
-        })}
+    dropzoneId: 'ap-stage-dropzone',
+    fileInputId: 'ap-stage-file-input',
+    statPillId: 'ap-stage-webp-stat',
+    hiddenInputName: 'modelImage',
+    hiddenInputId: 'ap-form-model-url',
+    previewImgId: 'ap-live-model-preview',
+    urlFallbackInputId: 'ap-stage-url-fallback',
+    initialValue: stageImg,
+    label: '3D STAGE HERO / MODEL PHOTO (AUTOMATIC WEBP COMPRESSION)',
+    hint: 'PNG (transparent cutout) or JPG · WebP compressed with Alpha Transparency preserved',
+  })}
       </div>
 
       <!-- 3. Garment 1: TOP / HERO PRODUCT -->
@@ -1281,17 +1281,17 @@ function renderLookConfigForm(slotId: number): string {
         </div>
 
         ${renderWebpDropzoneHtml({
-          dropzoneId: 'ap-top-dropzone',
-          fileInputId: 'ap-top-file-input',
-          statPillId: 'ap-top-webp-stat',
-          hiddenInputName: 'top_image',
-          hiddenInputId: 'ap-top-img-url',
-          previewImgId: 'ap-top-img-preview',
-          urlFallbackInputId: 'ap-top-url-fallback',
-          initialValue: topImg,
-          label: 'ITEM 1 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
-          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
-        })}
+    dropzoneId: 'ap-top-dropzone',
+    fileInputId: 'ap-top-file-input',
+    statPillId: 'ap-top-webp-stat',
+    hiddenInputName: 'top_image',
+    hiddenInputId: 'ap-top-img-url',
+    previewImgId: 'ap-top-img-preview',
+    urlFallbackInputId: 'ap-top-url-fallback',
+    initialValue: topImg,
+    label: 'ITEM 1 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
+    hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+  })}
       </div>
 
       <!-- 4. Garment 2: BOTTOM / ITEM 2 -->
@@ -1331,17 +1331,17 @@ function renderLookConfigForm(slotId: number): string {
           <div class="ap-chips-row">${sizeChips(btmSizes, 'bottom', btmProd?.sizes || ['30', '32', '34'])}</div>
         </div>
         ${renderWebpDropzoneHtml({
-          dropzoneId: 'ap-btm-dropzone',
-          fileInputId: 'ap-btm-file-input',
-          statPillId: 'ap-btm-webp-stat',
-          hiddenInputName: 'btm_image',
-          hiddenInputId: 'ap-btm-img-url',
-          previewImgId: 'ap-btm-img-preview',
-          urlFallbackInputId: 'ap-btm-url-fallback',
-          initialValue: btmImg,
-          label: 'ITEM 2 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
-          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
-        })}
+    dropzoneId: 'ap-btm-dropzone',
+    fileInputId: 'ap-btm-file-input',
+    statPillId: 'ap-btm-webp-stat',
+    hiddenInputName: 'btm_image',
+    hiddenInputId: 'ap-btm-img-url',
+    previewImgId: 'ap-btm-img-preview',
+    urlFallbackInputId: 'ap-btm-url-fallback',
+    initialValue: btmImg,
+    label: 'ITEM 2 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
+    hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+  })}
       </div>
 
       <!-- 5. Garment 3: FOOTWEAR -->
@@ -1379,17 +1379,17 @@ function renderLookConfigForm(slotId: number): string {
           <div class="ap-chips-row">${sizeChips(shoeSizes, 'shoe', shoeProd?.sizes || ['41', '42', '43', '44'])}</div>
         </div>
         ${renderWebpDropzoneHtml({
-          dropzoneId: 'ap-shoe-dropzone',
-          fileInputId: 'ap-shoe-file-input',
-          statPillId: 'ap-shoe-webp-stat',
-          hiddenInputName: 'shoe_image',
-          hiddenInputId: 'ap-shoe-img-url',
-          previewImgId: 'ap-shoe-img-preview',
-          urlFallbackInputId: 'ap-shoe-url-fallback',
-          initialValue: shoeImg,
-          label: 'ITEM 3 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
-          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
-        })}
+    dropzoneId: 'ap-shoe-dropzone',
+    fileInputId: 'ap-shoe-file-input',
+    statPillId: 'ap-shoe-webp-stat',
+    hiddenInputName: 'shoe_image',
+    hiddenInputId: 'ap-shoe-img-url',
+    previewImgId: 'ap-shoe-img-preview',
+    urlFallbackInputId: 'ap-shoe-url-fallback',
+    initialValue: shoeImg,
+    label: 'ITEM 3 PRODUCT PHOTO (AUTOMATIC WEBP COMPRESSION)',
+    hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+  })}
       </div>
 
       <!-- 6. Live Math Box -->
@@ -1469,17 +1469,17 @@ function renderProductEditForm(p: ManagedProduct): string {
         </div>
 
         ${renderWebpDropzoneHtml({
-          dropzoneId: 'ap-prod-dropzone',
-          fileInputId: 'ap-prod-file-input',
-          statPillId: 'ap-prod-webp-stat',
-          hiddenInputName: 'image',
-          hiddenInputId: 'ap-prod-img-url',
-          previewImgId: 'ap-prod-img-preview',
-          urlFallbackInputId: 'ap-prod-url-fallback',
-          initialValue: p.image,
-          label: 'PRODUCT IMAGE (AUTOMATIC WEBP COMPRESSION)',
-          hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
-        })}
+    dropzoneId: 'ap-prod-dropzone',
+    fileInputId: 'ap-prod-file-input',
+    statPillId: 'ap-prod-webp-stat',
+    hiddenInputName: 'image',
+    hiddenInputId: 'ap-prod-img-url',
+    previewImgId: 'ap-prod-img-preview',
+    urlFallbackInputId: 'ap-prod-url-fallback',
+    initialValue: p.image,
+    label: 'PRODUCT IMAGE (AUTOMATIC WEBP COMPRESSION)',
+    hint: 'Cutout PNG or product photo · WebP compressed with Alpha Transparency',
+  })}
       </div>
 
       <div class="ap-form-section ap-garment-config-box">
@@ -1525,11 +1525,11 @@ function renderProductEditForm(p: ManagedProduct): string {
           <label class="ap-label">TAP TO TOGGLE — ACTIVE SIZES SHIP TO CUSTOMERS</label>
           <div class="ap-chips-row" id="ap-prod-size-chips">
             ${chips
-              .map(
-                (s) => `
+      .map(
+        (s) => `
               <button type="button" class="ap-chip-btn ${p.sizes.includes(s) ? 'is-active' : ''}" data-chip-group="prod" data-val="${s}">${s}</button>`
-              )
-              .join('')}
+      )
+      .join('')}
           </div>
           <div class="ap-custom-size-row">
             <input type="text" id="ap-prod-custom-size" class="ap-input" placeholder="Custom size (e.g. 29)" maxlength="6" />
@@ -1919,8 +1919,8 @@ export function bindAdminEvents(container: HTMLElement): void {
       modalTitle.textContent = initialMode === 1
         ? `Configure Single Hero — Look ${lookNum}`
         : initialMode === 2
-        ? `Configure Duo Combo (2 Pieces) — Look ${lookNum}`
-        : `Configure Outfit & 3 Items — Look ${lookNum}`;
+          ? `Configure Duo Combo (2 Pieces) — Look ${lookNum}`
+          : `Configure Outfit & 3 Items — Look ${lookNum}`;
     }
     if (modalSlotKicker) modalSlotKicker.textContent = `RUNWAY SLOT ${lookNum} OF 12`;
     modalBody.innerHTML = renderLookConfigForm(slotId);

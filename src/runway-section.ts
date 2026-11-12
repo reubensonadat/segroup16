@@ -8,6 +8,10 @@ import {
   addToBag,
   generateShortlistText,
   StylingBagItem,
+  RING_FLOOR_MARGIN,
+  CLASSIC_ANCHOR_X,
+  CLASSIC_BASE_BOTTOM,
+  FRONT_FADE_ZONE,
 } from './runway-logic';
 import { LOOKS, PRODUCTS, ProductItem } from './data';
 import { formatGhs, toGhs } from './currency';
@@ -27,6 +31,7 @@ export class RunwaySection extends HTMLElement {
   private cur = 0;
   private vel = 0;
   private still = false;
+  private stillBlend = 0; // 0→1 eased cross-fade between walking body and at-rest hero
   private playing = false;
   private engaged = false;
   private panelHover = false;
@@ -49,6 +54,12 @@ export class RunwaySection extends HTMLElement {
     vel: number;
     trip: boolean;
   }> = [];
+
+  // Hot-path caches — avoid forced reflows and redundant style writes per frame
+  private bodyWidthCache = new WeakMap<HTMLElement, number>();
+
+  // Pixel-exact hero transform mirror of the resting body (see queueHeroSnap)
+  private heroSnapActive = false;
 
   // DOM elements
   private stageEl!: HTMLElement;
@@ -309,8 +320,8 @@ export class RunwaySection extends HTMLElement {
             <div class="rw__specs-head">SPECIFICATIONS:</div>
             <table class="rw__specs-table">
               ${Object.entries(topProd.specs)
-                .map(([k, v]) => `<tr><td class="rw__spec-k">${k}</td><td class="rw__spec-v">${v}</td></tr>`)
-                .join('')}
+              .map(([k, v]) => `<tr><td class="rw__spec-k">${k}</td><td class="rw__spec-v">${v}</td></tr>`)
+              .join('')}
             </table>
           `;
         }
@@ -494,7 +505,9 @@ export class RunwaySection extends HTMLElement {
       this.modelH = Math.max(180, Math.min(Math.round(maxSafeH), 520));
       this.unit = Math.max(120, 0.3 * this.stageW);
       this.stageEl.style.setProperty('--rw-hx', `${0.5 * this.stageW}px`);
-      this.stageEl.style.setProperty('--rw-hy', `${bottomPad}px`);
+      // Hero bottom must equal the ring floor margin so the body→hero
+      // handoff at rest is pixel-identical (no drop after landing).
+      this.stageEl.style.setProperty('--rw-hy', `${RING_FLOOR_MARGIN}px`);
       this.style.setProperty('--rw-ax', '50%');
     } else {
       // Keep the stage within the available first viewport while preserving full-body framing.
@@ -504,13 +517,17 @@ export class RunwaySection extends HTMLElement {
       const maxSafeH = (this.stageH - bottomPad - safeHeadroom) / this.fs;
       this.modelH = Math.max(180, Math.min(Math.round(maxSafeH), 460));
       this.unit = Math.max(90, this.stageW * 0.32 * 1.6);
-      this.stageEl.style.setProperty('--rw-hx', `${0.32 * this.stageW}px`);
-      this.stageEl.style.setProperty('--rw-hy', `${bottomPad}px`);
+      // Hero anchors mirror the classic slot math (ax / ay) exactly.
+      this.stageEl.style.setProperty('--rw-hx', `${CLASSIC_ANCHOR_X * this.stageW}px`);
+      this.stageEl.style.setProperty('--rw-hy', `${CLASSIC_BASE_BOTTOM}px`);
       this.style.setProperty('--rw-ax', '32%');
     }
 
     this.style.setProperty('--rw-model-h', `${this.modelH}px`);
     this.stageEl.style.setProperty('--rw-model-h', `${this.modelH}px`);
+
+    // Stage geometry changed — cached body widths are stale.
+    this.bodyWidthCache = new WeakMap();
 
     if (!this.isMobile && this.sheetHost) {
       this.closeMobileSheet();
@@ -575,8 +592,37 @@ export class RunwaySection extends HTMLElement {
         this.classList.add('rw--still');
       } else {
         this.classList.remove('rw--still');
+        // Zero-latency exit: the front body must be at full opacity on the
+        // very first frame of the new walk (no one-frame dim, no flicker).
+        this.stillBlend = 0;
+        this.clearHeroSnap();
       }
     }
+  }
+
+  /* Pins the hero to the EXACT pixel transform the walking body rendered with
+   * (same numbers, same string). Two layers with bit-identical geometry
+   * showing the same image cross-fade with zero perceptible change — the
+   * body→hero handoff becomes mathematically invisible. */
+  private queueHeroSnap(x: number, bottom: number, scale: number) {
+    const hero = this.heroes[this.index];
+    if (!hero) return;
+    if (!this.heroSnapActive) {
+      hero.style.left = '0px';
+      hero.style.bottom = '0px';
+      this.heroSnapActive = true;
+    }
+    hero.style.transform = `translate3d(${x.toFixed(1)}px, ${(-bottom).toFixed(1)}px, 0) translateX(-50%) scale(${scale.toFixed(3)})`;
+  }
+
+  private clearHeroSnap() {
+    if (!this.heroSnapActive) return;
+    this.heroSnapActive = false;
+    this.heroes.forEach((h) => {
+      h.style.left = '';
+      h.style.bottom = '';
+      h.style.transform = '';
+    });
   }
 
   public setIndex(i: number, silent = false) {
@@ -835,8 +881,15 @@ export class RunwaySection extends HTMLElement {
     let delta = this.lastTime ? time - this.lastTime : 16.67;
     this.lastTime = time;
     delta = Math.min(100, Math.max(1, delta));
+    const frameDelta = delta;
 
     let stillNow = true;
+
+    // Body↔hero cross-fade: ease IN over 280ms when settling (matches the
+    // hero's fade-in CSS), but exit INSTANTLY when a new walk starts — a slow
+    // fade-out would leave a ghost of the old hero hovering over the walk.
+    this.stillBlend = this.still ? clamp(this.stillBlend + frameDelta / 280, 0, 1) : 0;
+    const crossFading = this.still && this.stillBlend < 1;
 
     if (!this.isMobile) {
       const K = 95;
@@ -913,12 +966,13 @@ export class RunwaySection extends HTMLElement {
       this.renderClassic();
     }
 
-    if (!stillNow || this.isDragging) {
+    if (!stillNow || this.isDragging || crossFading) {
       this.kick();
     }
   }
 
   private renderRing() {
+    const front = ((Math.round(this.cur) % this.bodies.length) + this.bodies.length) % this.bodies.length;
     this.bodies.forEach((body, a) => {
       const slot = computeRingSlot(
         a,
@@ -927,17 +981,30 @@ export class RunwaySection extends HTMLElement {
         this.stageH,
         false,
         this.fs,
-        this.still
+        false // fade handled by the blended cross-fade below
       );
-      this.put(body, slot.x, slot.bottom, slot.scale, slot.opacity, slot.blur, slot.zIndex);
+      const fade = 1 - this.stillBlend * clamp((FRONT_FADE_ZONE - slot.sl) / FRONT_FADE_ZONE, 0, 1);
+      this.put(body, slot.x, slot.bottom, slot.scale, slot.opacity * fade, slot.blur, slot.zIndex);
+      // While the settle cross-fade runs, pin the hero to the body's exact
+      // sub-pixel transform so the two layers are bit-identical — the handoff
+      // becomes mathematically invisible (no shimmer between rounded CSS-var
+      // positioning and the toFixed() transform strings).
+      if (this.stillBlend > 0 && a === front) {
+        this.queueHeroSnap(slot.x, slot.bottom, slot.scale);
+      }
     });
   }
 
   private renderClassic() {
+    const front = ((Math.round(this.target) % this.bodies.length) + this.bodies.length) % this.bodies.length;
     this.bodies.forEach((body, i) => {
       const st = this.classicStates[i];
-      const slot = computeClassicSlot(st.x, this.stageW, this.still);
-      this.put(body, slot.x, slot.bottom, slot.scale, slot.opacity, slot.blur, slot.zIndex);
+      const slot = computeClassicSlot(st.x, this.stageW, false);
+      const fade = 1 - this.stillBlend * clamp((FRONT_FADE_ZONE - Math.abs(st.x)) / FRONT_FADE_ZONE, 0, 1);
+      this.put(body, slot.x, slot.bottom, slot.scale, slot.opacity * fade, slot.blur, slot.zIndex);
+      if (this.stillBlend > 0 && i === front) {
+        this.queueHeroSnap(slot.x, slot.bottom, slot.scale);
+      }
     });
   }
 
@@ -950,20 +1017,39 @@ export class RunwaySection extends HTMLElement {
     blur: number,
     zIndex: number
   ) {
-    const w = el.offsetWidth || this.modelH * 0.5625;
+    // Cached width — reading offsetWidth here would force a synchronous
+    // layout for every model on every frame (the #1 source of jank).
+    let w = this.bodyWidthCache.get(el);
+    if (w === undefined) {
+      w = el.offsetWidth || this.modelH * 0.5625;
+      this.bodyWidthCache.set(el, w);
+    }
     if (x + (w * scale) / 2 < -4 || x - (w * scale) / 2 > this.stageW + 4) {
       opacity = 0;
     }
 
+    // Only transform + opacity are written unconditionally: they are
+    // compositor-only, so they never trigger layout or style recalc storms.
     el.style.transform = `translate3d(${x.toFixed(1)}px, ${(-bottom).toFixed(1)}px, 0) translateX(-50%) scale(${scale.toFixed(3)})`;
     el.style.opacity = opacity.toFixed(3);
-    el.style.zIndex = String(zIndex);
-    el.style.visibility = opacity < 0.01 ? 'hidden' : 'visible';
-    el.style.pointerEvents = opacity < 0.5 ? 'none' : 'auto';
 
+    // Diff-before-write everything else to keep the style engine idle.
+    const z = String(zIndex);
+    if (el.style.zIndex !== z) el.style.zIndex = z;
+
+    const vis = opacity < 0.01 ? 'hidden' : 'visible';
+    if (el.style.visibility !== vis) el.style.visibility = vis;
+
+    const pe = opacity < 0.5 ? 'none' : 'auto';
+    if (el.style.pointerEvents !== pe) el.style.pointerEvents = pe;
+
+    // Quantize blur to 0.5px buckets and write only when the bucket changes —
+    // re-assigning filter each frame forces the compositor to re-rasterize
+    // the whole image layer, which is extremely expensive mid-walk.
     if (blur > 0.05) {
-      el.style.filter = `blur(${blur.toFixed(1)}px)`;
-    } else {
+      const f = `blur(${(Math.round(blur * 2) / 2).toFixed(1)}px)`;
+      if (el.style.filter !== f) el.style.filter = f;
+    } else if (el.style.filter) {
       el.style.filter = '';
     }
   }

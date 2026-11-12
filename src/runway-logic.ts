@@ -29,6 +29,14 @@ export function shortestIndexDelta(i: number, index: number, total = 6): number 
   return d;
 }
 
+/* Shared rest-pose anchors — used by BOTH the slot math and the hero overlay
+ * so the walking body and the at-rest hero land in the exact same spot.
+ * No handoff jump / "drop" after settling. */
+export const RING_FLOOR_MARGIN = 34; // desktop ring: floor offset from stage bottom
+export const CLASSIC_ANCHOR_X = 0.3; // mobile classic: x position of the front slot
+export const CLASSIC_BASE_BOTTOM = 22; // mobile classic: bottom offset of the front slot
+export const FRONT_FADE_ZONE = 0.35; // |phi-steps| within which the still cross-fade applies
+
 /**
  * Computes 3D ring placement for body `a`
  */
@@ -45,7 +53,7 @@ export function computeRingSlot(
   const cx = 0.5 * W;
   const R = (isMobile ? 0.72 : 0.62) * W;
   const P = (isMobile ? 1.9 : 1.65) * W;
-  const floor = H - 34;
+  const floor = H - RING_FLOOR_MARGIN;
   const horizon = 0.62 * H;
 
   // wrap phi into (-PI, PI]
@@ -98,8 +106,8 @@ export function computeClassicSlot(
   W: number,
   still = false
 ): ClassicSlot {
-  const ax = 0.3;
-  const ay = 22;
+  const ax = CLASSIC_ANCHOR_X;
+  const ay = CLASSIC_BASE_BOTTOM;
   const sx = 0.32;
   const sy = 22;
   const sr = 0.76;
