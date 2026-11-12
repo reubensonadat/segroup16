@@ -5606,9 +5606,10 @@ body.ap-no-scroll {
 
 
 /* ==========================================================================
-   ADMIN OPERATIONS DESK — SHARP EDITORIAL DESIGN SYSTEM
-   Square corners. Ink borders. Flat surfaces. Monochrome.
-   Matches the storefront design system (Helvetica, #151413 ink, 0px radius).
+   ADMIN OPERATIONS DESK
+   Base structural layout. Visual refinement (hairline borders, soft
+   surfaces, radii) is applied by the ADMIN DESK REFINEMENT LAYER at the
+   end of this file so the desk matches the storefront design system.
    ========================================================================== */
 body.ap-no-scroll {
   overflow: hidden;
@@ -8072,4 +8073,760 @@ a.ap-linked-item-row:hover .ap-item-name {
   padding: 5px 0;
   color: #3f3f46;
   word-break: break-word;
+}
+
+/* ==========================================================================
+   ADMIN DESK REFINEMENT LAYER
+   Softens the heavy brutalist treatment (2px ink borders, hard offset
+   shadows, bold uppercase) so the admin matches the storefront language:
+   hairline #e4e4e4 rules, #fafaf9 surfaces, normal-case headings, and
+   gentle radii. Primary buttons keep the square storefront token (0px).
+   ========================================================================== */
+
+/* ── Shell & sidebar ── */
+.ap-shell {
+  background: #ffffff;
+}
+
+.ap-sidebar {
+  border-right: 1px solid #e4e4e4;
+}
+
+.ap-brand-block {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-monogram {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.ap-brand-title {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.ap-nav-header {
+  color: #767676;
+  opacity: 1;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+}
+
+.ap-nav-item {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-radius: 6px;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.ap-nav-item:hover {
+  background: #f0f0ef;
+}
+
+.ap-sidebar-footer {
+  border-top: 1px solid #e4e4e4;
+}
+
+.ap-exit-link {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* ── Page headers ── */
+.ap-page-head {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-kicker {
+  color: #767676;
+  opacity: 1;
+  font-weight: 600;
+}
+
+.ap-page-title {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: -0.02em;
+}
+
+.ap-header-tag {
+  border: 1px solid #d9d9d9;
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 7px 14px;
+}
+
+/* ── Quick actions & top looks ── */
+.ap-quick-jump {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fafaf9;
+  font-weight: 600;
+}
+
+.ap-quick-jump:hover {
+  background: #151413;
+  border-color: #151413;
+}
+
+.ap-toplook-row {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+}
+
+.ap-toplook-thumb {
+  border: 1px solid #e4e4e4;
+  border-radius: 6px;
+}
+
+.ap-toplook-name {
+  font-weight: 600;
+}
+
+/* ── Cards & panels ── */
+.ap-card {
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(21, 20, 19, 0.04);
+}
+
+.ap-panel-head {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-panel-head h3 {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.ap-kpi-card {
+  background: #fafaf9;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ap-kpi-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -12px rgba(21, 20, 19, 0.25);
+}
+
+.ap-kpi-card--profit {
+  background: #151413;
+}
+
+.ap-kpi-label {
+  color: inherit;
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+.ap-kpi-val {
+  font-weight: 600;
+}
+
+/* ── Pipeline bars ── */
+.ap-pipe-track {
+  border: none;
+  border-radius: 999px;
+  background: #ececea;
+  overflow: hidden;
+}
+
+.ap-pipe-fill {
+  border-radius: 999px;
+}
+
+.ap-pipe-info {
+  font-weight: 500;
+  color: #555351;
+}
+
+/* ── Promo engine ── */
+.ap-promo-huge-rate {
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  font-weight: 600;
+}
+
+.ap-preset-chip {
+  border: 1px solid #d9d9d9;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.ap-preset-chip:hover {
+  border-color: #151413;
+}
+
+.ap-feedback-banner {
+  background: #f6f5f1;
+  color: #151413;
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* ── Forms ── */
+.ap-label {
+  font-weight: 600;
+  color: #555351;
+  opacity: 1;
+}
+
+.ap-input,
+.ap-select {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ap-input:focus,
+.ap-select:focus {
+  border-color: #151413;
+  box-shadow: inset 0 0 0 1px #151413;
+  outline: none;
+}
+
+/* ── Tables ── */
+.ap-table-wrap,
+.ap-mini-table-wrap {
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+}
+
+.ap-table th {
+  background: #fafaf9;
+  color: #767676;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-table td {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-table-row td {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-table-prod-img {
+  border: 1px solid #e4e4e4;
+  border-radius: 6px;
+}
+
+.ap-category-tag,
+.ap-margin-tag,
+.ap-bundle-tag,
+.ap-cell-tag {
+  border: 1px solid #e4e4e4;
+  border-radius: 999px;
+  background: #fafaf9;
+  color: #555351;
+  font-weight: 600;
+}
+
+.ap-margin-tag {
+  background: #151413;
+  color: #ffffff;
+  border-color: #151413;
+}
+
+.ap-empty-state {
+  border: 1px dashed #cfcfcd;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #767676;
+}
+
+/* ── Status tags — soft semantic pills ── */
+.ap-status-tag {
+  border: none;
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 4px 10px;
+  color: #151413;
+}
+
+.ap-status--processing {
+  background: #f7edd4;
+}
+
+.ap-status--in-transit,
+.ap-status--out-for-delivery,
+.ap-status--ready-for-pickup {
+  background: #e2ecfa;
+}
+
+.ap-status--delivered,
+.ap-status--collected {
+  background: #ddefe2;
+}
+
+.ap-status--cancelled {
+  background: #f9e0e0;
+}
+
+.ap-status-select .dropdown-react {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+}
+
+.ap-garment-chip {
+  border: 1px solid #e4e4e4;
+  border-radius: 6px;
+}
+
+.ap-garment-chip img {
+  border-radius: 4px;
+}
+
+/* ── Subtabs & callouts ── */
+.ap-subtabs {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ap-subtab {
+  border-right: 1px solid #e4e4e4;
+  font-weight: 600;
+}
+
+.ap-subtab:hover {
+  background: #f0f0ef;
+}
+
+.ap-info-callout {
+  border: 1px solid #e4e4e4;
+  border-left: 3px solid #151413;
+  border-radius: 8px;
+  background: #fafaf9;
+}
+
+/* ── Runway outfit cards ── */
+.ap-outfit-card {
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ap-outfit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px -18px rgba(21, 20, 19, 0.3);
+}
+
+.ap-outfit-head {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-badge {
+  border: 1px solid #e4e4e4;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.ap-badge--active {
+  background: #151413;
+  color: #ffffff;
+  border-color: #151413;
+}
+
+.ap-outfit-media {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-outfit-badge-overlay {
+  border-radius: 0 8px 0 8px;
+  font-weight: 600;
+}
+
+.ap-outfit-title {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+/* Linked items box */
+.ap-linked-items-box {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ap-linked-box-head {
+  background: #fafaf9;
+  color: #767676;
+  border-bottom: 1px solid #e4e4e4;
+  font-weight: 600;
+}
+
+.ap-linked-count {
+  border: 1px solid #e4e4e4;
+  border-radius: 999px;
+}
+
+.ap-linked-item-row {
+  border-top: 1px solid #e4e4e4;
+}
+
+.ap-item-num {
+  border: 1px solid #e4e4e4;
+  border-radius: 50%;
+}
+
+.ap-item-thumb {
+  border: 1px solid #e4e4e4;
+  border-radius: 6px;
+}
+
+.ap-item-slot-tag {
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.ap-item-name {
+  font-weight: 600;
+}
+
+/* Price footer */
+.ap-outfit-price-foot {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ap-foot-final {
+  border-left: 1px solid #e4e4e4;
+}
+
+.ap-math-label {
+  font-weight: 600;
+}
+
+.ap-bundle-discount-pill {
+  border: none;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Empty slots */
+.ap-outfit-card--empty {
+  border-style: dashed;
+  border-color: #cfcfcd;
+}
+
+.ap-empty-slot-icon {
+  border: 1px dashed #cfcfcd;
+  border-radius: 8px;
+}
+
+.ap-empty-slot-title {
+  font-weight: 600;
+}
+
+/* ── Configurator slide-up modal ── */
+.ap-slide-card {
+  border: 1px solid #e4e4e4;
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -16px 48px rgba(21, 20, 19, 0.16);
+}
+
+.ap-slide-head {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-slide-head h2 {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.ap-close-btn {
+  border: 1px solid #d9d9d9;
+  border-radius: 50%;
+}
+
+.ap-form-section-title {
+  border-left: 3px solid #151413;
+  border-bottom: 1px solid #e4e4e4;
+  font-weight: 600;
+}
+
+.ap-garment-config-box {
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ap-garment-config-box .ap-form-section-title {
+  background: #fafaf9;
+  border-left: none;
+  border-top: 3px solid #151413;
+  margin: 0 0 16px;
+}
+
+.ap-chip-btn {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.ap-chip-btn:hover {
+  background: #f0f0ef;
+  border-color: #151413;
+}
+
+.ap-chip-btn.is-active {
+  border-color: #151413;
+}
+
+.ap-model-preview-box {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+}
+
+.ap-model-preview-box img {
+  border: 1px solid #e4e4e4;
+  border-radius: 6px;
+}
+
+.ap-live-math-box {
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ap-live-math-box .ap-form-section-title {
+  border-left: none;
+  border-top: 3px solid #151413;
+  background: #fafaf9;
+  margin-bottom: 0;
+}
+
+.ap-math-box-item {
+  border-left: 1px solid #e4e4e4;
+}
+
+.ap-math-box-item span {
+  font-weight: 600;
+}
+
+.ap-math-box-item strong {
+  font-weight: 600;
+}
+
+/* ── Settings ── */
+.ap-action-row {
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.ap-action-row strong {
+  font-weight: 600;
+}
+
+/* ── Receipt & inspector modals ── */
+.ap-receipt-meta {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+}
+
+.ap-receipt-items-list {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ap-receipt-item-row {
+  border-top: 1px solid #e4e4e4;
+}
+
+.ap-receipt-item-row img {
+  border: 1px solid #e4e4e4;
+  border-radius: 6px;
+}
+
+.ap-receipt-totals {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+}
+
+.ap-price-huge {
+  font-weight: 600;
+}
+
+.ap-style-inspect-img {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+}
+
+.ap-style-inspect-info h3 {
+  font-weight: 600;
+}
+
+.ap-specs-grid {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ap-specs-grid>div {
+  border-top: 1px solid #e4e4e4;
+  border-left: 1px solid #e4e4e4;
+}
+
+.ap-specs-grid span {
+  font-weight: 600;
+}
+
+.ap-specs-grid strong {
+  font-weight: 600;
+}
+
+/* ── Format banner & mode cards (remove hard offset shadows) ── */
+.ap-format-banner {
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  box-shadow: none;
+}
+
+.ap-format-banner-title {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.ap-format-card {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  box-shadow: none;
+  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.ap-format-card:hover {
+  transform: translateY(-1px);
+  border-color: #151413;
+  box-shadow: 0 8px 20px -14px rgba(21, 20, 19, 0.35);
+}
+
+.ap-format-card.is-active {
+  box-shadow: none;
+}
+
+.ap-format-card-badge {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.ap-format-card-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ap-mode-choice-card {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  box-shadow: none;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.ap-mode-choice-card:hover {
+  border-color: #151413;
+}
+
+.ap-mode-choice-card.is-active {
+  box-shadow: none;
+}
+
+.ap-mode-choice-badge {
+  font-weight: 600;
+}
+
+.ap-mode-choice-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ── WebP dropzone & stats ── */
+.ap-dropzone {
+  border: 1.5px dashed #c8c8c6;
+  border-radius: 10px;
+  background: #fafaf9;
+}
+
+.ap-dropzone:hover {
+  border-color: #151413;
+}
+
+.ap-dropzone.ap-dropzone--dragover {
+  border-color: #15803d;
+}
+
+.ap-dropzone-icon {
+  border-radius: 50%;
+}
+
+.ap-webp-stat-pill {
+  border: 1px solid #15803d;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.ap-webp-saved {
+  border-radius: 999px;
+}
+
+.ap-url-fallback-label {
+  font-weight: 600;
+}
+
+/* ── Sizing toggles & specs editor ── */
+.ap-toggle-btn {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.ap-toggle-btn:hover {
+  border-color: #151413;
+}
+
+.ap-specs-editor {
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  background: #fafaf9;
+}
+
+.ap-specs-label {
+  font-weight: 600;
+  color: #767676;
+}
+
+.ap-preset-btn {
+  border: 1px solid #d9d9d9;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.ap-preset-btn:hover {
+  border-color: #151413;
+}
+
+.ap-spec-key {
+  font-weight: 600;
+}
+
+.ap-spec-del-btn {
+  border: 1px solid #e4e4e4;
+  border-radius: 6px;
 }
