@@ -54,6 +54,13 @@ npm run build
 
 `npm run preview` serves the production build locally after `npm run build`.
 
+## Documentation
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — how the whole application is built, in plain English
+- [DATABASE.md](./DATABASE.md) — the database schema: tables and how they connect
+- [how this is made.md](./how%20this%20is%20made.md) — deep-dive into the 3D runway math and customization
+- [docs/](./docs) — detailed guides (uploads, store config contract, runway architecture)
+
 ## Project structure
 
 - `index.html` — minimal Vite document and React root
