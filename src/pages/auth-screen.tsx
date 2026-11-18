@@ -210,7 +210,9 @@ function OTPInput({
 
 // ─── Shared showcase panel (Kola AuthShowcase port) ─────────────────────────
 
-const SHOWCASE_PHOTO = '/assets/fit-1-model.webp';
+const SHOWCASE_PHOTO =
+    'https://images.unsplash.com/photo-1772678595035-4ff18bac6d93?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D';
+const SHOWCASE_FALLBACK = '/assets/fit-1-model.webp';
 
 const ShowcaseCard = () => (
     <motion.div
@@ -233,9 +235,24 @@ const ShowcaseCard = () => (
 );
 
 function AuthShowcase({ mode }: { mode: Mode }) {
+    const reduce = useReducedMotion();
+    const [photoSrc, setPhotoSrc] = useState(SHOWCASE_PHOTO);
     return (
-        <aside className="auth-showcase">
-            <img src={SHOWCASE_PHOTO} alt="" aria-hidden="true" draggable={false} />
+        <motion.aside
+            className="auth-showcase"
+            initial={false}
+            animate={{ x: reduce ? 0 : mode === 'signup' ? '100%' : '0%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 120 }}
+        >
+            <img
+                src={photoSrc}
+                onError={() => {
+                    if (photoSrc !== SHOWCASE_FALLBACK) setPhotoSrc(SHOWCASE_FALLBACK);
+                }}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+            />
             <div className="auth-showcase__wash" />
 
             <div className="auth-showcase__logo" style={authEnter(0)}>
@@ -286,7 +303,7 @@ function AuthShowcase({ mode }: { mode: Mode }) {
             <div className="auth-showcase__footer" style={authEnter(360)}>
                 <ShowcaseCard />
             </div>
-        </aside>
+        </motion.aside>
     );
 }
 
@@ -309,6 +326,13 @@ export function AuthScreen() {
     const [notice, setNotice] = useState<string | null>(null);
     const [demoCode, setDemoCode] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    const reduce = useReducedMotion();
+    const [isDesktop, setIsDesktop] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : false));
+    useEffect(() => {
+        const handler = () => setIsDesktop(window.innerWidth >= 1024);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, []);
 
     // Sign-up (visual only) fields — deliberately never sent anywhere.
     const [signUpName, setSignUpName] = useState('');
@@ -416,11 +440,28 @@ export function AuthScreen() {
         window.location.hash = '#home';
     };
 
+    // Vendly's mode switch: the dark showcase panel and the form panel trade
+    // sides — the showcase sweeps across the screen OVER the form (z-order),
+    // spring damping 25 / stiffness 120, while the form content does a subtle
+    // directional fade-slide (20px, 0.2s).
+    const switchMode = (m: Mode) => {
+        if (m === mode) return;
+        setMode(m);
+        setError(null);
+        setNotice(null);
+        setDemoCode(null);
+    };
+
     return (
         <div className="auth-overlay" role="dialog" aria-modal="true" aria-label="Runway admin sign in">
             <AuthShowcase mode={mode} />
 
-            <div className="auth-panel">
+            <motion.div
+                className="auth-panel"
+                initial={false}
+                animate={{ x: !reduce && isDesktop ? (mode === 'signin' ? '100%' : '0%') : '0%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 120 }}
+            >
                 <button className="auth-close" onClick={close} aria-label="Back to the storefront">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                         <path d="M18 6 6 18M6 6l12 12" />
@@ -441,12 +482,7 @@ export function AuthScreen() {
                                 role="tab"
                                 aria-selected={mode === m}
                                 className={`auth-tab ${mode === m ? 'auth-tab--on' : ''}`}
-                                onClick={() => {
-                                    setMode(m);
-                                    setError(null);
-                                    setNotice(null);
-                                    setDemoCode(null);
-                                }}
+                                onClick={() => switchMode(m)}
                             >
                                 {m === 'signin' ? 'Sign in' : 'Sign up'}
                                 {mode === m && <motion.span layoutId="auth-tab-pill" className="auth-tab__pill" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
@@ -454,9 +490,16 @@ export function AuthScreen() {
                         ))}
                     </div>
 
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence mode="wait" initial={false}>
                         {mode === 'signin' ? (
-                            <motion.div key="signin" {...authStepMotion} className="auth-flow">
+                            <motion.div
+                                key="signin"
+                                className="auth-flow"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                            >
                                 <h1 className="auth-heading">{step === 'otp' ? 'Enter your code' : 'Sign in'}</h1>
                                 <p className="auth-sub">
                                     {step === 'otp' ? (
@@ -559,7 +602,14 @@ export function AuthScreen() {
                                 </AnimatePresence>
                             </motion.div>
                         ) : (
-                            <motion.div key="signup" {...authStepMotion} className="auth-flow">
+                            <motion.div
+                                key="signup"
+                                className="auth-flow"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{ duration: 0.2 }}
+                            >
                                 <h1 className="auth-heading">Create your label</h1>
                                 <p className="auth-sub">
                                     One phone number is all it takes. <strong>Sign-up is decorative</strong> in this demo build — nothing is submitted.
@@ -610,7 +660,7 @@ export function AuthScreen() {
                         )}
                     </AnimatePresence>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }
