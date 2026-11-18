@@ -1,3 +1,4 @@
+import { isAdminAuthed } from './auth';
 import { renderCartPage, bindCartEvents, updateGlobalCartCount } from './pages/cart-page';
 import { renderAdminPage, bindAdminEvents } from './pages/admin-page';
 import { renderTrackPage, bindTrackEvents } from './pages/track-page';
@@ -57,6 +58,18 @@ export function initRouter() {
       return;
     }
 
+    // #login — the React AuthScreen overlay (src/pages/auth-screen.tsx)
+    // renders itself; here we just clear the stage underneath it.
+    if (path === '#login') {
+      document.body.classList.remove('is-admin-view');
+      if (runwaySection) runwaySection.style.display = 'none';
+      if (pageContainer) {
+        pageContainer.style.display = 'none';
+        pageContainer.innerHTML = '';
+      }
+      return;
+    }
+
     // Secondary pages — remove admin isolation unless it's admin
     if (path !== '#admin') document.body.classList.remove('is-admin-view');
     if (runwaySection) runwaySection.style.display = 'none';
@@ -72,6 +85,11 @@ export function initRouter() {
       pageContainer.innerHTML = renderTrackPage(orderIdParam);
       bindTrackEvents(pageContainer);
     } else if (path === '#admin') {
+      // OTP gate — no session, no dashboard (see src/auth.tsx)
+      if (!isAdminAuthed()) {
+        window.location.hash = '#login';
+        return;
+      }
       document.body.classList.add('is-admin-view');
       pageContainer.innerHTML = renderAdminPage();
       bindAdminEvents(pageContainer);

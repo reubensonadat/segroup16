@@ -5,6 +5,7 @@ import {
   resetOrdersToSeed,
   OrderStatus,
 } from '../orders-store';
+import { pushAllToSupabase } from '../lib/supabase-sync';
 import { mountAdminDock } from '../admin-dock';
 import { PRODUCTS, LOOKS, ProductItem } from '../data';
 import { formatGhs, toGhs } from '../currency';
@@ -1597,6 +1598,15 @@ export function renderAdminPage(): string {
         </nav>
 
         <div class="ap-sidebar-footer">
+          <!-- Supabase sync — uploads the CURRENT local data (products, looks,
+               orders, settings) so the DB becomes the source of truth. -->
+          <div id="ap-sync-block" style="margin-bottom:14px; padding:12px; border:1px solid #2a2927; border-radius:10px; background:#1b1a19;">
+            <button type="button" id="ap-sync-push-btn" style="display:flex; align-items:center; gap:8px; width:100%; padding:10px 12px; border:1px solid #4b4a47; border-radius:8px; background:#fff; color:#151413; font-size:11px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">
+              ${ic.link}
+              <span>PUSH DATA TO SUPABASE</span>
+            </button>
+            <span id="ap-sync-status" style="display:block; margin-top:8px; font-size:10px; line-height:1.5; color:#9b9a97;">Text data only — images stay local in /assets</span>
+          </div>
           <a href="#home" class="ap-exit-link">
             <span>RETURN TO STOREFRONT</span>
             <span class="ap-exit-arrow">${ic.external}</span>
@@ -1652,6 +1662,35 @@ export function bindAdminEvents(container: HTMLElement): void {
   // Start on Overview, hide other 3 sections
   container.querySelectorAll<HTMLElement>('.ap-section').forEach((sec) => {
     sec.hidden = sec.id !== 'ap-overview';
+  });
+
+  // ── Supabase push: upload the current local data through the admin-auth
+  // edge function (service role) — RLS keeps the anon key read-only.
+  const syncBtn = container.querySelector<HTMLButtonElement>('#ap-sync-push-btn');
+  const syncStatus = container.querySelector<HTMLElement>('#ap-sync-status');
+  syncBtn?.addEventListener('click', async () => {
+    if (syncBtn.hasAttribute('data-busy')) return;
+    syncBtn.setAttribute('data-busy', '1');
+    const label = syncBtn.querySelector('span');
+    const prevLabel = label?.textContent ?? 'PUSH DATA TO SUPABASE';
+    if (label) label.textContent = 'PUSHING…';
+    if (syncStatus) syncStatus.textContent = 'Uploading local products, looks, orders & settings…';
+    try {
+      const report = await pushAllToSupabase();
+      if (syncStatus) {
+        syncStatus.textContent = report
+          ? `Live ✓ ${report.products} products · ${report.looks} looks · ${report.orders} orders${report.settings ? ' · settings ✓' : ''}`
+          : 'Sign in first (OTP) and set VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in .env.local.';
+      }
+      if (label) label.textContent = 'DATA LIVE IN SUPABASE ✓';
+    } catch (err) {
+      if (syncStatus) syncStatus.textContent = `Push failed: ${err instanceof Error ? err.message : 'unknown error'}`;
+      if (label) label.textContent = 'RETRY PUSH';
+    }
+    syncBtn.removeAttribute('data-busy');
+    window.setTimeout(() => {
+      if (label) label.textContent = prevLabel;
+    }, 4000);
   });
 
   const activateNav = (sectionId: string) => {

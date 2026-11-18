@@ -1,9 +1,12 @@
-import {useEffect, useState, type CSSProperties} from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import './index.css';
 import './runway-section';
-import {initRouter} from './router';
-import {updateGlobalCartCount} from './pages/cart-page';
-import {getActiveBrand} from './brand-presets';
+import { initRouter } from './router';
+import { updateGlobalCartCount } from './pages/cart-page';
+import { getActiveBrand } from './brand-presets';
+import { AuthProvider } from './auth';
+import { AuthScreen } from './pages/auth-screen';
+import { pullAllFromSupabase } from './lib/supabase-sync';
 
 function Header() {
   const brand = getActiveBrand();
@@ -49,9 +52,20 @@ function StylingBag() {
   );
 }
 
+function useHashRoute(): string {
+  const [hash, setHash] = useState(() => window.location.hash || '#home');
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash || '#home');
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+  return hash.toLowerCase();
+}
+
 export default function App() {
   const [runwayMarkup, setRunwayMarkup] = useState('');
   const [templateError, setTemplateError] = useState<string | null>(null);
+  const hash = useHashRoute();
 
   useEffect(() => {
     fetch('/runway-template.html')
@@ -76,6 +90,10 @@ export default function App() {
     initRouter();
     updateGlobalCartCount();
 
+    // Supabase pull (silent, non-blocking): rows → the existing local stores.
+    // No-op unless VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY are set.
+    void pullAllFromSupabase().catch(() => { });
+
     const curtain = document.getElementById('opening-curtain');
     if (!curtain) return;
     const fadeTimer = window.setTimeout(() => {
@@ -87,18 +105,21 @@ export default function App() {
   }, [runwayMarkup]);
 
   return (
-    <>
-      <div id="opening-curtain" className="opening-curtain" aria-hidden="true">
-        {Array.from({length: 7}, (_, index) => (
-          <div className="opening-bar" style={{'--col': index} as CSSProperties} key={index} />
-        ))}
-      </div>
-      <Header />
-      <main>
-        <div id="page-content" className="page-container" style={{display: 'none'}} />
-        {templateError ? <p role="alert">{templateError}</p> : <div dangerouslySetInnerHTML={{__html: runwayMarkup}} />}
-      </main>
-      <StylingBag />
-    </>
+    <AuthProvider>
+      <>
+        <div id="opening-curtain" className="opening-curtain" aria-hidden="true">
+          {Array.from({ length: 7 }, (_, index) => (
+            <div className="opening-bar" style={{ '--col': index } as CSSProperties} key={index} />
+          ))}
+        </div>
+        <Header />
+        <main>
+          <div id="page-content" className="page-container" style={{ display: 'none' }} />
+          {templateError ? <p role="alert">{templateError}</p> : <div dangerouslySetInnerHTML={{ __html: runwayMarkup }} />}
+        </main>
+        <StylingBag />
+        {hash === '#login' && <AuthScreen />}
+      </>
+    </AuthProvider>
   );
 }
